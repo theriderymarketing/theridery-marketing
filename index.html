@@ -79,13 +79,22 @@ h2 em{color:#F97316;font-style:normal}
 .chip b{display:block;color:#1a1a2e;font-size:1.2em;margin-top:3px}
 
 /* Catalog */
-.catgroup{margin-bottom:22px}
-.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#1a1a2e;font-size:1em;padding-bottom:8px;border-bottom:2px solid #F97316;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
-.catgroup h4 span{font-family:'Montserrat',sans-serif;font-size:.7em;letter-spacing:0;color:#9ca3af;font-weight:600}
-.prod{display:flex;gap:12px;padding:12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;align-items:center}
+.catgroup{margin-bottom:10px;border:2px solid #e5e7eb;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s}
+.catgroup.open{border-color:#F97316}
+.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#1a1a2e;font-size:1.05em;margin:0;padding:16px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;background:#fff;transition:background .2s}
+.catgroup h4:hover{background:#fff7ed}
+.catgroup.open h4{background:linear-gradient(90deg,#fff7ed,#fff)}
+.catgroup h4 .ico{font-size:1.2em}
+.catgroup h4 .lbl{flex:1}
+.catgroup h4 .count{font-family:'Montserrat',sans-serif;font-size:.72em;letter-spacing:0;color:#9ca3af;font-weight:600}
+.catgroup h4 .arrow{color:#F97316;font-weight:900;transition:transform .25s;display:inline-block;width:16px;text-align:center}
+.catgroup.open h4 .arrow{transform:rotate(90deg)}
+.catgroup .items{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 14px}
+.catgroup.open .items{max-height:20000px;padding:4px 14px 14px}
+.prod{position:relative;display:flex;gap:14px;padding:12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;align-items:center}
 .prod:hover{border-color:#fed7aa}
 .prod.on{border-color:#F97316;background:#fff7ed}
-.prod .img{width:64px;height:64px;border-radius:10px;background:#f3f4f6 center/cover no-repeat;flex-shrink:0}
+.prod .img{width:100px;height:100px;border-radius:12px;background:#f3f4f6 center/cover no-repeat;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .prod .meta{flex:1;min-width:0}
 .prod .title{font-weight:700;font-size:.88em;line-height:1.3;margin-bottom:4px}
 .prod .line{font-size:.72em;color:#9ca3af;display:flex;gap:8px;flex-wrap:wrap}
@@ -93,8 +102,8 @@ h2 em{color:#F97316;font-style:normal}
 .prod .price{font-family:'Staatliches',sans-serif;font-size:1.1em;letter-spacing:1px;color:#F97316;flex-shrink:0}
 .prod .check{width:24px;height:24px;border-radius:50%;border:2px solid #e5e7eb;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;font-size:.9em;color:#F97316;font-weight:900}
 .prod.on .check{background:#F97316;border-color:#F97316;color:#fff}
-.prod.reco{background:linear-gradient(90deg,#fff7ed 0%,#fff 50%);border-color:#fed7aa}
-.prod.reco::before{content:"RECO";font-family:'Staatliches',sans-serif;letter-spacing:1px;position:absolute;margin-left:-10px;margin-top:-6px;background:#F97316;color:#fff;font-size:.65em;padding:2px 6px;border-radius:4px}
+.prod.reco{background:linear-gradient(90deg,#fff7ed 0%,#fff 60%);border-color:#fed7aa}
+.reco-badge{position:absolute;top:-8px;left:10px;background:#F97316;color:#fff;font-family:'Staatliches',sans-serif;letter-spacing:1.5px;font-size:.7em;padding:3px 8px;border-radius:5px;box-shadow:0 2px 6px rgba(249,115,22,.3);z-index:2}
 .empty{padding:14px;text-align:center;color:#9ca3af;font-size:.85em;background:#f8f9fa;border-radius:10px}
 
 /* Floating cart */
@@ -318,36 +327,73 @@ function bucketPoids(p){return p<65?'l':p<95?'m':'h'}
 /* On utilise des mots-cles pour ranger les produits dans les   */
 /* bonnes categories. Ajustable si Shopify change ses types.    */
 
-var CATEGORY_RULES=[
-  // Wing
-  {disc:'wing',cat:'aile',     label:'Ailes de wing',           icon:'🪂',kw:['wing','aile','wingfoil']},
-  {disc:'wing',cat:'planche_r',label:'Planches rigides',        icon:'🛹',kw:['planche rigide','board rigide','hard board','wingboard rigide']},
-  {disc:'wing',cat:'planche_g',label:'Planches gonflables',     icon:'💨',kw:['gonflable','inflatable','isup']},
-  {disc:'wing',cat:'foil',     label:'Foils',                   icon:'🐟',kw:['foil','mat','aile avant','stab']},
-  {disc:'wing',cat:'accessoire',label:'Harnais, leash & casque',icon:'🛟',kw:['harnais','leash','casque','impact','gilet','pompe']},
-  {disc:'wing',cat:'combi',    label:'Combinaisons & lycras',   icon:'🧥',kw:['combi','combinaison','wetsuit','lycra','neoprene']},
+/* Ordre important : plus specifique d'abord, catch-all en dernier.              */
+/* `pt` = product_types exacts (priorite absolue). `kw` = fallback mots-cles.    */
+/* `exclude` disqualifie un produit si un mot d'exclusion est present.           */
+/* `disc:null` = s'applique aux deux disciplines (accessoires, combi).           */
+/* `sized:true` = categorie qui a des tailles numeriques (pour reco / RECO flag).*/
 
-  // Kite
-  {disc:'kite',cat:'kite',     label:'Ailes de kite',            icon:'🪁',kw:['kite','aile']},
-  {disc:'kite',cat:'barre',    label:'Barres',                   icon:'🎚️',kw:['barre','bar','control bar']},
-  {disc:'kite',cat:'planche_tt',label:'Planches twin-tip',       icon:'🛹',kw:['twintip','twin tip','planche kite','board kite','tt']},
-  {disc:'kite',cat:'planche_sf',label:'Planches surf / directional',icon:'🏄',kw:['surf kite','directional','wave']},
-  {disc:'kite',cat:'foil',     label:'Foils',                    icon:'🐟',kw:['foil']},
-  {disc:'kite',cat:'accessoire',label:'Harnais, leash & casque', icon:'🛟',kw:['harnais','leash','casque','impact','gilet','pompe']},
-  {disc:'kite',cat:'combi',    label:'Combinaisons & lycras',    icon:'🧥',kw:['combi','combinaison','wetsuit','lycra','neoprene']}
+/* Scope simplifie : wing = ailes + planches + foil | kite = ailes + planches + barre */
+/* pt = product_type exact (priorite). kw = mots-cles fallback sur pt+title.          */
+/* exclude = disqualifie si present dans pt+title (evite faux positifs).              */
+/* sized:true + unit = categorie avec taille numerique pour le flag RECO.             */
+
+var EXCL_BASE=['harnais','leash','casque','impact','gilet','pompe','pump','keypod','coffre','cadenas','antivol','housse','cover','combinaison','wetsuit','lycra','neoprene','shorty','sac ',' bag','lunette','gant','chausson'];
+
+var CATEGORY_RULES=[
+  // ========== WING ==========
+  {disc:'wing',cat:'planche_g',label:'Planches gonflables',icon:'💨',sized:true,unit:'L',
+    pt:['Planche Gonflable','Wingboard Gonflable','Inflatable','Board Gonflable'],
+    kw:['planche gonflable','board gonflable','wingboard gonflable','inflatable board','isup'],
+    exclude:EXCL_BASE},
+  {disc:'wing',cat:'planche_r',label:'Planches rigides',icon:'🛹',sized:true,unit:'L',
+    pt:['Planche Rigide','Wingboard Rigide','Hard Board','Wingboard','Board Wing','Planche Wing'],
+    kw:['wingboard','planche rigide','board rigide','hard board','planche wing'],
+    exclude:EXCL_BASE.concat(['gonflable','inflatable','isup','aile'])},
+  {disc:'wing',cat:'foil',label:'Foils / Mâts',icon:'🐟',sized:true,unit:'cm²',
+    pt:['Foil','Foil Complet','Foil Wing','Mat','Mât','Aile Avant','Stab','Stabilisateur','Fuselage'],
+    kw:['foil wing','foil complet','aile avant','stab','stabilisateur','kit foil','mat carbone','mât carbone','fuselage'],
+    exclude:EXCL_BASE.concat(['kite','twintip','twin-tip','planche','wing '])},
+  {disc:'wing',cat:'aile',label:'Ailes de wing',icon:'🪂',sized:true,unit:'m²',
+    pt:['Wing','Aile Wing','Wingfoil','Aile de Wing','Ailes Wing','Ailes de Wing'],
+    kw:[' wing ','wingfoil','aile de wing','aile wing'],
+    exclude:EXCL_BASE.concat(['planche','board','foil','mat','mât','stab','kite','twintip','twin-tip','wingboard'])},
+
+  // ========== KITE ==========
+  {disc:'kite',cat:'barre',label:'Barres',icon:'🎚️',sized:false,
+    pt:['Barre','Bar','Barre Kite','Control Bar','Barre de Kite'],
+    kw:['barre de kite','barre kite','control bar','bar kite'],
+    exclude:EXCL_BASE.concat(['planche','foil','wing','twintip','twin-tip','ailes'])},
+  {disc:'kite',cat:'planche_tt',label:'Planches',icon:'🛹',sized:true,unit:'cm',
+    pt:['Twintip','Twin-Tip','Planche Kite','Kiteboard','Planche Twin-Tip','Surf Kite','Planche Kitesurf','Directional','Planche Surf'],
+    kw:['twintip','twin-tip','twin tip','kiteboard','planche kite','planche kitesurf','surf kite','directional','kitesurf surfboard'],
+    exclude:EXCL_BASE.concat(['wing ','foil','barre','bar '])},
+  {disc:'kite',cat:'kite',label:'Ailes de kite',icon:'🪁',sized:true,unit:'m²',
+    pt:['Kite','Aile Kite','Kitesurf','Aile Kitesurf','Ailes Kitesurf','Ailes Kite','Aile de Kite'],
+    kw:['aile de kite','aile kite','kite '],
+    exclude:EXCL_BASE.concat(['planche','board','barre','bar ','foil','twintip','twin-tip','wingboard','wing '])}
 ];
 
+/* Matche un produit a UNE seule categorie — priorite pt exact, puis pt+title.     */
 function matchCategory(product,disc){
-  var hay=(product.product_type+' '+product.title+' '+(product.tags||'')).toLowerCase();
-  // Priorite : on teste dans l'ordre, premier match gagne
+  var pt=(product.product_type||'').toLowerCase().trim();
+  var title=(product.title||'').toLowerCase();
+  var hay=' '+pt+' '+title+' ';
+
+  function hasAny(h,words){for(var i=0;i<words.length;i++){if(h.indexOf(words[i])!==-1)return true}return false}
+
   for(var i=0;i<CATEGORY_RULES.length;i++){
     var r=CATEGORY_RULES[i];
     if(r.disc!==disc)continue;
-    for(var j=0;j<r.kw.length;j++){
-      if(hay.indexOf(r.kw[j])!==-1)return r.cat;
-    }
+    if(r.exclude&&r.exclude.length&&hasAny(hay,r.exclude))continue;
+
+    // 1. product_type exact match
+    if(r.pt&&r.pt.some(function(x){return pt===x.toLowerCase()}))return r.cat;
+
+    // 2. keywords (product_type + title uniquement, pas les tags — trop bruite)
+    if(r.kw&&hasAny(hay,r.kw))return r.cat;
   }
-  return null;
+  return null; // non classe = exclu
 }
 
 /* ============================================================ */
@@ -416,34 +462,67 @@ function getRecommendation(){
         {label:'Kite vent léger', value:k.light},
         {label:'Kite medium',     value:k.medium},
         {label:'Kite vent fort',  value:k.strong},
-        {label:'Twin-tip (cm)',   value:k.board},
-        k.foil?{label:'Kite-foil',value:k.foil}:null
-      ].filter(Boolean),
+        {label:'Twin-tip',        value:k.board+' cm'}
+      ],
       sizes:{
         kite:[k.light,k.medium,k.strong],
-        planche:[k.board],
-        foil:k.foil?[k.foil]:[]
+        planche:[k.board]
       }
     };
   }
 }
 
-/* Extrait une taille numerique approximative depuis un titre de variant  */
-/* ex. "7m", "12m²", "140cm", "5.5" -> nombre ou null                     */
-function parseSize(str){
+/* Parsing strict : exige une UNITE attachee au nombre (m, m², L, cm, cm²).       */
+/* Evite que "Keypod 5GS" -> 5 ou "Pro 2024" -> 2024 soient pris pour des tailles. */
+/* Retourne {value:number, unit:'m²'|'L'|'cm²'|'cm'} ou null.                      */
+function parseSizeWithUnit(str){
   if(!str)return null;
-  var m=String(str).match(/(\d+(?:[.,]\d+)?)/);
+  var s=String(str).toLowerCase().replace('²','2');
+  // Ordre : cm2 > m2 > cm > l > m (les plus specifiques d'abord)
+  var re=/(\d+(?:[.,]\d+)?)\s*(cm2|m2|cm|l\b|m\b)/;
+  var m=s.match(re);
   if(!m)return null;
-  return parseFloat(m[1].replace(',','.'));
-}
-function parseRange(str){
-  var m=String(str).match(/(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/);
-  if(m)return [parseFloat(m[1].replace(',','.')),parseFloat(m[2].replace(',','.'))];
-  var s=parseSize(str);return s==null?null:[s,s];
+  var n=parseFloat(m[1].replace(',','.'));
+  var u=m[2].replace('m2','m²').replace('cm2','cm²').replace('l','L').toUpperCase()
+         .replace('M²','m²').replace('CM²','cm²').replace('CM','cm');
+  // normalise
+  u=u.toLowerCase();
+  if(u==='m²')u='m²';else if(u==='cm²')u='cm²';else if(u==='cm')u='cm';else if(u==='l')u='L';else if(u==='m')u='m²';
+  // NB : pour les ailes, l'utilisateur ecrit souvent "5m" au lieu de "5m²". On traite m comme m² pour ailes.
+  return {value:n,unit:u};
 }
 
-/* Le produit matche la taille recommandee ? */
+function parseRangeWithUnit(str){
+  if(!str)return null;
+  var s=String(str).toLowerCase().replace('²','2');
+  var re=/(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)\s*(cm2|m2|cm|l\b|m\b)?/;
+  var m=s.match(re);
+  if(m){
+    var lo=parseFloat(m[1].replace(',','.')),hi=parseFloat(m[2].replace(',','.'));
+    return {lo:lo,hi:hi,unit:m[3]?(m[3].replace('m2','m²').replace('cm2','cm²')):null};
+  }
+  // single value
+  var single=parseSizeWithUnit(str);
+  if(single)return {lo:single.value,hi:single.value,unit:single.unit};
+  // borne seule ex. ≥140L, <60L
+  var mb=s.match(/(\d+(?:[.,]\d+)?)\s*(cm2|m2|cm|l\b|m\b)/);
+  if(mb){
+    var v=parseFloat(mb[1].replace(',','.'));
+    if(/≥|>=/.test(s))return {lo:v,hi:v*2,unit:mb[2]};
+    if(/≤|<=|</.test(s))return {lo:0,hi:v,unit:mb[2]};
+    return {lo:v,hi:v,unit:mb[2]};
+  }
+  return null;
+}
+
+/* Le produit matche-t-il la taille recommandee ? Exige la bonne unite.           */
 function matchesRecoSize(product,cat,reco){
+  // Recupere la regle pour connaitre l'unite attendue
+  var rule=CATEGORY_RULES.find(function(r){return r.cat===cat&&r.disc===S.discipline});
+  if(!rule||!rule.sized)return false;
+  var expectedUnit=rule.unit;
+
+  // Resout les tailles cibles pour cette categorie
   var targets=[];
   if(S.discipline==='wing'){
     if(cat==='aile')targets=reco.sizes.aile;
@@ -451,25 +530,29 @@ function matchesRecoSize(product,cat,reco){
     else if(cat==='foil')targets=reco.sizes.foil;
   } else {
     if(cat==='kite')targets=reco.sizes.kite;
-    else if(cat==='planche_tt'||cat==='planche_sf')targets=reco.sizes.planche;
-    else if(cat==='foil')targets=reco.sizes.foil;
+    else if(cat==='planche_tt')targets=reco.sizes.planche;
   }
   if(!targets||!targets.length)return false;
-  // compare variants par taille (variant.title ou option1)
+
+  // Tolerance par unite
+  var tol={'m²':0.75,'L':15,'cm²':300,'cm':5}[expectedUnit]||0;
+
   var variants=product.variants||[];
   for(var i=0;i<variants.length;i++){
     if(!variants[i].available)continue;
-    var vSize=parseSize(variants[i].title||variants[i].option1);
-    if(vSize==null){
-      // fallback titre produit
-      vSize=parseSize(product.title);
-      if(vSize==null)continue;
-    }
+    // Parse taille du variant (titre variant d'abord, puis titre produit)
+    var ps=parseSizeWithUnit(variants[i].title)||parseSizeWithUnit(variants[i].option1)||parseSizeWithUnit(product.title);
+    if(!ps)continue;
+    // Unite doit matcher (normalise "m"=>"m²" pour ailes)
+    var pUnit=ps.unit==='m'?'m²':ps.unit;
+    if(pUnit!==expectedUnit)continue;
+
     for(var j=0;j<targets.length;j++){
-      var rng=parseRange(targets[j]);
+      var rng=parseRangeWithUnit(targets[j]);
       if(!rng)continue;
-      var tol=0.75; // tolerance 0.75m ou 0.75L
-      if(vSize>=rng[0]-tol&&vSize<=rng[1]+tol)return true;
+      var rUnit=rng.unit||expectedUnit;
+      if(rUnit!==expectedUnit)continue;
+      if(ps.value>=rng.lo-tol&&ps.value<=rng.hi+tol)return true;
     }
   }
   return false;
@@ -502,6 +585,7 @@ function productCard(p,recoFlag){
   var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
   var price=Math.round(parseFloat(v.price));
   return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-price="'+price+'">'+
+    (recoFlag?'<span class="reco-badge">RECO</span>':'')+
     (img?'<div class="img" style="background-image:url('+img+')"></div>':'<div class="img"></div>')+
     '<div class="meta">'+
       '<div class="title">'+escapeHtml(p.title)+'</div>'+
@@ -530,9 +614,10 @@ function renderCatalog(){
     el('stockWarn').innerHTML='';
   }
 
+  var firstOpened=false;
   cats.forEach(function(rule){
     var list=S.products.filter(function(p){return matchCategory(p,disc)===rule.cat});
-    // Tri : reco en premier, puis par prix croissant
+    // Flag RECO + tri (reco d'abord, prix croissant)
     list.forEach(function(p){p._reco=matchesRecoSize(p,rule.cat,reco)});
     list.sort(function(a,b){
       if(a._reco!==b._reco)return a._reco?-1:1;
@@ -542,9 +627,14 @@ function renderCatalog(){
     });
     if(!list.length)return;
     anyShown=true;
-    html+='<div class="catgroup"><h4>'+rule.icon+' '+rule.label+' <span>'+list.length+' en stock</span></h4>';
-    html+=list.map(function(p){return productCard(p,p._reco)}).join('');
-    html+='</div>';
+    var recoCount=list.filter(function(p){return p._reco}).length;
+    var openAttr=!firstOpened?' open':'';firstOpened=true;
+    html+='<div class="catgroup'+openAttr+'" data-cat="'+rule.cat+'">'+
+      '<h4><span class="ico">'+rule.icon+'</span><span class="lbl">'+rule.label+'</span>'+
+      '<span class="count">'+list.length+' article'+(list.length>1?'s':'')+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
+      '<span class="arrow">▶</span></h4>'+
+      '<div class="items">'+list.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
+    '</div>';
   });
 
   if(!anyShown){
@@ -553,8 +643,10 @@ function renderCatalog(){
 
   el('catalog').innerHTML=html;
 
-  // Delegation click
+  // Delegation click : h4 = toggle accordeon, .prod = toggle selection
   el('catalog').onclick=function(e){
+    var head=e.target.closest('.catgroup>h4');
+    if(head){head.parentNode.classList.toggle('open');return}
     var row=e.target.closest('.prod');if(!row)return;
     var vid=row.getAttribute('data-vid');
     if(S.selected[vid]){
