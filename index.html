@@ -272,7 +272,7 @@ h2 em{color:#F97316;font-style:normal}
 /* ============================================================ */
 var CFG={
   STORE:'https://theridery.com',
-  PRODUCTS_URL:'https://theridery.com/products.json?limit=250',
+  COLLECTIONS_URL:'https://theridery.com/collections.json?limit=250',
   STAFF_EMAIL:'marketing@theridery.com',
   // Formspree optionnel (clé publique) pour envoi auto sans ouvrir le mail client
   FORMSPREE_ID:null    // ex. 'xyzabcde' si tu crees un form sur formspree.io
@@ -322,78 +322,45 @@ var KITE_SIZING={
 function bucketPoids(p){return p<65?'l':p<95?'m':'h'}
 
 /* ============================================================ */
-/*  CATEGORISATION AUTO depuis les product_type/tags Shopify     */
+/*  MAPPING COLLECTIONS SHOPIFY (source de verite du shop)       */
 /* ============================================================ */
-/* On utilise des mots-cles pour ranger les produits dans les   */
-/* bonnes categories. Ajustable si Shopify change ses types.    */
+/* On ne categorise plus les produits manuellement. On utilise   */
+/* directement les collections telles qu'elles sont organisees   */
+/* dans le shop Shopify (Kevin a deja fait ce travail).          */
+/* Chaque categorie cherche sa collection via title matching.    */
 
-/* Ordre important : plus specifique d'abord, catch-all en dernier.              */
-/* `pt` = product_types exacts (priorite absolue). `kw` = fallback mots-cles.    */
-/* `exclude` disqualifie un produit si un mot d'exclusion est present.           */
-/* `disc:null` = s'applique aux deux disciplines (accessoires, combi).           */
-/* `sized:true` = categorie qui a des tailles numeriques (pour reco / RECO flag).*/
+var CATEGORY_MAP={
+  wing:[
+    {key:'aile',     titles:['ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing',          icon:'🪂', sized:true},
+    {key:'planche_r',titles:['planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides',       icon:'🛹', sized:true},
+    {key:'planche_g',titles:['planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', icon:'💨', sized:true},
+    {key:'foil',     titles:['foils wing','foil wing','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts',         icon:'🐟', sized:true}
+  ],
+  kite:[
+    {key:'kite',     titles:['ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', icon:'🪁', sized:true},
+    {key:'planche',  titles:['planches kitesurf','planches kite','twintips','twintip','twin tip','kiteboards'], unit:'cm', label:'Planches',  icon:'🛹', sized:true},
+    {key:'barre',    titles:['barres de kite','barres kite','barres','control bars'], unit:null, label:'Barres',    icon:'🎚️', sized:false}
+  ]
+};
 
-/* Scope simplifie : wing = ailes + planches + foil | kite = ailes + planches + barre */
-/* pt = product_type exact (priorite). kw = mots-cles fallback sur pt+title.          */
-/* exclude = disqualifie si present dans pt+title (evite faux positifs).              */
-/* sized:true + unit = categorie avec taille numerique pour le flag RECO.             */
+function normStr(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
 
-var EXCL_BASE=['harnais','leash','casque','impact','gilet','pompe','pump','keypod','coffre','cadenas','antivol','housse','cover','combinaison','wetsuit','lycra','neoprene','shorty','sac ',' bag','lunette','gant','chausson'];
-
-var CATEGORY_RULES=[
-  // ========== WING ==========
-  {disc:'wing',cat:'planche_g',label:'Planches gonflables',icon:'💨',sized:true,unit:'L',
-    pt:['Planche Gonflable','Wingboard Gonflable','Inflatable','Board Gonflable'],
-    kw:['planche gonflable','board gonflable','wingboard gonflable','inflatable board','isup'],
-    exclude:EXCL_BASE},
-  {disc:'wing',cat:'planche_r',label:'Planches rigides',icon:'🛹',sized:true,unit:'L',
-    pt:['Planche Rigide','Wingboard Rigide','Hard Board','Wingboard','Board Wing','Planche Wing'],
-    kw:['wingboard','planche rigide','board rigide','hard board','planche wing'],
-    exclude:EXCL_BASE.concat(['gonflable','inflatable','isup','aile'])},
-  {disc:'wing',cat:'foil',label:'Foils / Mâts',icon:'🐟',sized:true,unit:'cm²',
-    pt:['Foil','Foil Complet','Foil Wing','Mat','Mât','Aile Avant','Stab','Stabilisateur','Fuselage'],
-    kw:['foil wing','foil complet','aile avant','stab','stabilisateur','kit foil','mat carbone','mât carbone','fuselage'],
-    exclude:EXCL_BASE.concat(['kite','twintip','twin-tip','planche','wing '])},
-  {disc:'wing',cat:'aile',label:'Ailes de wing',icon:'🪂',sized:true,unit:'m²',
-    pt:['Wing','Aile Wing','Wingfoil','Aile de Wing','Ailes Wing','Ailes de Wing'],
-    kw:[' wing ','wingfoil','aile de wing','aile wing'],
-    exclude:EXCL_BASE.concat(['planche','board','foil','mat','mât','stab','kite','twintip','twin-tip','wingboard'])},
-
-  // ========== KITE ==========
-  {disc:'kite',cat:'barre',label:'Barres',icon:'🎚️',sized:false,
-    pt:['Barre','Bar','Barre Kite','Control Bar','Barre de Kite'],
-    kw:['barre de kite','barre kite','control bar','bar kite'],
-    exclude:EXCL_BASE.concat(['planche','foil','wing','twintip','twin-tip','ailes'])},
-  {disc:'kite',cat:'planche_tt',label:'Planches',icon:'🛹',sized:true,unit:'cm',
-    pt:['Twintip','Twin-Tip','Planche Kite','Kiteboard','Planche Twin-Tip','Surf Kite','Planche Kitesurf','Directional','Planche Surf'],
-    kw:['twintip','twin-tip','twin tip','kiteboard','planche kite','planche kitesurf','surf kite','directional','kitesurf surfboard'],
-    exclude:EXCL_BASE.concat(['wing ','foil','barre','bar '])},
-  {disc:'kite',cat:'kite',label:'Ailes de kite',icon:'🪁',sized:true,unit:'m²',
-    pt:['Kite','Aile Kite','Kitesurf','Aile Kitesurf','Ailes Kitesurf','Ailes Kite','Aile de Kite'],
-    kw:['aile de kite','aile kite','kite '],
-    exclude:EXCL_BASE.concat(['planche','board','barre','bar ','foil','twintip','twin-tip','wingboard','wing '])}
-];
-
-/* Matche un produit a UNE seule categorie — priorite pt exact, puis pt+title.     */
-function matchCategory(product,disc){
-  var pt=(product.product_type||'').toLowerCase().trim();
-  var title=(product.title||'').toLowerCase();
-  var hay=' '+pt+' '+title+' ';
-
-  function hasAny(h,words){for(var i=0;i<words.length;i++){if(h.indexOf(words[i])!==-1)return true}return false}
-
-  for(var i=0;i<CATEGORY_RULES.length;i++){
-    var r=CATEGORY_RULES[i];
-    if(r.disc!==disc)continue;
-    if(r.exclude&&r.exclude.length&&hasAny(hay,r.exclude))continue;
-
-    // 1. product_type exact match
-    if(r.pt&&r.pt.some(function(x){return pt===x.toLowerCase()}))return r.cat;
-
-    // 2. keywords (product_type + title uniquement, pas les tags — trop bruite)
-    if(r.kw&&hasAny(hay,r.kw))return r.cat;
+/* Trouve la meilleure collection pour une liste de titres cibles. */
+function pickCollection(collections,targetTitles){
+  var targets=targetTitles.map(normStr);
+  // 1. Exact match
+  for(var i=0;i<collections.length;i++){
+    var ct=normStr(collections[i].title);
+    if(targets.indexOf(ct)!==-1)return collections[i];
   }
-  return null; // non classe = exclu
+  // 2. Collection title CONTAINS target
+  for(var i=0;i<collections.length;i++){
+    var ct=normStr(collections[i].title);
+    for(var j=0;j<targets.length;j++){
+      if(targets[j]&&ct.indexOf(targets[j])!==-1)return collections[i];
+    }
+  }
+  return null;
 }
 
 /* ============================================================ */
@@ -403,31 +370,65 @@ var S={
   discipline:null,         // 'wing' | 'kite'
   profile:{sex:null,poids:null,taille:null,niveau:null,budget:null},
   recommendation:null,     // output de getRecommendation
-  products:[],             // produits Shopify filtres (inStock only)
+  collections:null,        // liste brute de toutes les collections Shopify
+  resolved:false,          // handles de collection resolus ?
   selected:{},             // variantId -> {qty, product, variant}
-  stockLoaded:false
+  loadStatus:''            // 'ok' | 'error' | '' (en cours)
 };
 
 /* ============================================================ */
-/*  FETCH CATALOGUE SHOPIFY                                      */
+/*  FETCH COLLECTIONS SHOPIFY                                    */
 /* ============================================================ */
-function fetchCatalog(){
-  return fetch(CFG.PRODUCTS_URL,{credentials:'omit'})
+/* Etape 1 : liste de toutes les collections, mappee aux cats.   */
+function fetchCollections(){
+  return fetch(CFG.COLLECTIONS_URL,{credentials:'omit'})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
     .then(function(data){
-      var raw=data.products||[];
-      // Filtre : au moins 1 variant available=true
-      S.products=raw.filter(function(p){
-        return (p.variants||[]).some(function(v){return v.available===true});
+      var cols=(data.collections||[]).concat(data.smart_collections||[]);
+      S.collections=cols;
+      // Resout chaque categorie vers sa collection Shopify
+      ['wing','kite'].forEach(function(disc){
+        CATEGORY_MAP[disc].forEach(function(cat){
+          var col=pickCollection(cols,cat.titles);
+          cat.handle=col?col.handle:null;
+          cat.collectionTitle=col?col.title:null;
+          console.log('[Ridery]',disc,cat.key,'→',cat.handle||'(non trouve)');
+        });
       });
-      S.stockLoaded=true;
-      console.log('[Ridery] Catalogue charge :',S.products.length,'produits en stock /',raw.length,'total');
+      S.resolved=true;
+      S.loadStatus='ok';
     })
     .catch(function(err){
-      console.warn('[Ridery] Fetch produits KO :',err.message,'— mode degrade');
-      S.products=[];
-      S.stockLoaded=false;
+      console.warn('[Ridery] Fetch collections KO :',err.message);
+      S.loadStatus='error';
     });
+}
+
+/* Etape 2 : produits d'une collection (appele a la volee sur step 2). */
+function fetchCollectionProducts(handle){
+  if(!handle)return Promise.resolve([]);
+  var url=CFG.STORE+'/collections/'+handle+'/products.json?limit=250';
+  return fetch(url,{credentials:'omit'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(function(data){
+      return (data.products||[]).filter(function(p){
+        return (p.variants||[]).some(function(v){return v.available===true});
+      });
+    })
+    .catch(function(err){
+      console.warn('[Ridery] Fetch collection',handle,'KO:',err.message);
+      return [];
+    });
+}
+
+/* Charge tous les produits des categories de la discipline courante. */
+function loadDisciplineProducts(){
+  var cats=CATEGORY_MAP[S.discipline]||[];
+  return Promise.all(cats.map(function(cat){
+    return fetchCollectionProducts(cat.handle).then(function(products){
+      cat.products=products;
+    });
+  }));
 }
 
 /* ============================================================ */
@@ -516,23 +517,24 @@ function parseRangeWithUnit(str){
 }
 
 /* Le produit matche-t-il la taille recommandee ? Exige la bonne unite.           */
-function matchesRecoSize(product,cat,reco){
-  // Recupere la regle pour connaitre l'unite attendue
-  var rule=CATEGORY_RULES.find(function(r){return r.cat===cat&&r.disc===S.discipline});
-  if(!rule||!rule.sized)return false;
-  var expectedUnit=rule.unit;
+function matchesRecoSize(product,catKey,reco){
+  var cat=(CATEGORY_MAP[S.discipline]||[]).find(function(c){return c.key===catKey});
+  if(!cat||!cat.sized)return false;
+  var expectedUnit=cat.unit;
 
   // Resout les tailles cibles pour cette categorie
   var targets=[];
   if(S.discipline==='wing'){
-    if(cat==='aile')targets=reco.sizes.aile;
-    else if(cat==='planche_r'||cat==='planche_g')targets=reco.sizes.planche;
-    else if(cat==='foil')targets=reco.sizes.foil;
+    if(catKey==='aile')targets=reco.sizes.aile;
+    else if(catKey==='planche_r')targets=[reco.sizes.planche[0]];
+    else if(catKey==='planche_g')targets=[reco.sizes.planche[1]];
+    else if(catKey==='foil')targets=reco.sizes.foil;
   } else {
-    if(cat==='kite')targets=reco.sizes.kite;
-    else if(cat==='planche_tt')targets=reco.sizes.planche;
+    if(catKey==='kite')targets=reco.sizes.kite;
+    else if(catKey==='planche')targets=reco.sizes.planche;
   }
-  if(!targets||!targets.length)return false;
+  targets=(targets||[]).filter(Boolean);
+  if(!targets.length)return false;
 
   // Tolerance par unite
   var tol={'m²':0.75,'L':15,'cm²':300,'cm':5}[expectedUnit]||0;
@@ -603,42 +605,51 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return({'
 
 function renderCatalog(){
   var reco=S.recommendation;
-  var disc=S.discipline;
-  var cats=CATEGORY_RULES.filter(function(r){return r.disc===disc});
+  var cats=CATEGORY_MAP[S.discipline]||[];
   var html='';
   var anyShown=false;
 
-  if(!S.stockLoaded){
-    el('stockWarn').innerHTML='<div class="warn">⚠️ Impossible de vérifier le stock en direct (probablement un bloqueur CORS local). Les produits sont affichés tel quels — merci de vérifier la dispo sur <a href="'+CFG.STORE+'" target="_blank">theridery.com</a> avant d\'envoyer le devis.</div>';
+  if(S.loadStatus==='error'){
+    el('stockWarn').innerHTML='<div class="warn">⚠️ Impossible de joindre le shop en direct. Vérifie la dispo sur <a href="'+CFG.STORE+'" target="_blank">theridery.com</a> avant d\'envoyer le devis.</div>';
   } else {
     el('stockWarn').innerHTML='';
   }
 
   var firstOpened=false;
-  cats.forEach(function(rule){
-    var list=S.products.filter(function(p){return matchCategory(p,disc)===rule.cat});
-    // Flag RECO + tri (reco d'abord, prix croissant)
-    list.forEach(function(p){p._reco=matchesRecoSize(p,rule.cat,reco)});
+  cats.forEach(function(cat){
+    var list=(cat.products||[]).slice();
+    if(!list.length){
+      // Pas de collection resolue ou vide — on affiche quand meme un header + lien
+      if(cat.handle){
+        html+='<div class="catgroup" data-cat="'+cat.key+'">'+
+          '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
+          '<span class="count">0 en stock</span><span class="arrow">▶</span></h4>'+
+          '<div class="items"><div class="empty">Rien en stock sur cette catégorie pour le moment. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir la collection →</a></div></div>'+
+        '</div>';
+      }
+      return;
+    }
+    // Flag RECO + tri
+    list.forEach(function(p){p._reco=matchesRecoSize(p,cat.key,reco)});
     list.sort(function(a,b){
       if(a._reco!==b._reco)return a._reco?-1:1;
       var pa=parseFloat((a.variants[0]||{}).price||0);
       var pb=parseFloat((b.variants[0]||{}).price||0);
       return pa-pb;
     });
-    if(!list.length)return;
     anyShown=true;
     var recoCount=list.filter(function(p){return p._reco}).length;
     var openAttr=!firstOpened?' open':'';firstOpened=true;
-    html+='<div class="catgroup'+openAttr+'" data-cat="'+rule.cat+'">'+
-      '<h4><span class="ico">'+rule.icon+'</span><span class="lbl">'+rule.label+'</span>'+
-      '<span class="count">'+list.length+' article'+(list.length>1?'s':'')+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
+    html+='<div class="catgroup'+openAttr+'" data-cat="'+cat.key+'">'+
+      '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
+      '<span class="count">'+list.length+' en stock'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
       '<span class="arrow">▶</span></h4>'+
       '<div class="items">'+list.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
     '</div>';
   });
 
   if(!anyShown){
-    html='<div class="empty">Pas de produits en stock trouvés pour cette discipline. Réessaye plus tard ou contacte la boutique : '+CFG.STAFF_EMAIL+'</div>';
+    html='<div class="empty">Aucune collection Shopify n\'a pu être résolue. Vérifie les noms de collections sur <a href="'+CFG.STORE+'/collections" target="_blank">theridery.com/collections</a> ou ajuste les <code>titles</code> dans le code.</div>';
   }
 
   el('catalog').innerHTML=html;
@@ -827,8 +838,12 @@ el('go-reco').onclick=function(){
   if(!validateProfile())return;
   S.recommendation=getRecommendation();
   renderRecoChips(S.recommendation);
-  renderCatalog();
+  // Affiche ecran + loader pendant le fetch des produits
+  el('catalog').innerHTML='<div class="empty"><div class="spinner" style="margin:0 auto 10px"></div>Chargement du matos en stock…</div>';
   show('s2');
+  loadDisciplineProducts().then(function(){
+    renderCatalog();
+  });
 };
 
 el('go-contact').onclick=function(){
@@ -847,7 +862,7 @@ el('go-send').onclick=sendDevis;
 /* ============================================================ */
 /*  BOOT                                                         */
 /* ============================================================ */
-fetchCatalog().then(function(){
+fetchCollections().then(function(){
   el('loading').classList.add('hide');
 });
 
