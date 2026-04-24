@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulateur Devis — The Ridery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Staatliches&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Montserrat',sans-serif;color:#1a1a2e;background:#faf9f7;-webkit-font-smoothing:antialiased;min-height:100vh}
+.app{max-width:760px;margin:0 auto;padding:28px 18px 120px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brandbar .logo{font-family:'Staatliches',sans-serif;letter-spacing:3px;font-size:1.1em;color:#1a1a2e}
+.brandbar .logo b{background:#F97316;color:#fff;padding:2px 8px;border-radius:4px}
+.brandbar .tag{font-size:.7em;font-weight:700;letter-spacing:2px;color:#9ca3af;text-transform:uppercase}
+
+/* Progress */
+.progress{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:26px}
+.progress>i{display:block;height:100%;background:linear-gradient(90deg,#F97316,#ea580c);transition:width .4s}
+
+/* Screens */
+.screen{display:none}
+.screen.on{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Titles */
+h1{font-family:'Staatliches',sans-serif;font-size:clamp(1.8em,5vw,2.4em);letter-spacing:2px;line-height:1.1;text-align:center;margin-bottom:10px}
+h1 span{background:#F97316;color:#fff;padding:0 10px}
+h2{font-family:'Staatliches',sans-serif;font-size:1.3em;letter-spacing:2px;margin-bottom:14px}
+h2 em{color:#F97316;font-style:normal}
+.subtitle{text-align:center;color:#6b7280;font-size:.95em;margin-bottom:28px;line-height:1.5}
+
+/* Discipline picker */
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.pick button{background:#fff;border:2px solid #e5e7eb;border-radius:22px;padding:30px 18px;cursor:pointer;transition:all .2s;font-family:inherit;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.pick button:hover{border-color:#F97316;transform:translateY(-3px);box-shadow:0 8px 28px rgba(249,115,22,.18)}
+.pick button .icon{font-size:2.4em;margin-bottom:8px;display:block}
+.pick button .name{font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:1.3em;color:#1a1a2e}
+.pick button .desc{font-size:.78em;color:#9ca3af;margin-top:6px;line-height:1.4}
+@media(max-width:520px){.pick{grid-template-columns:1fr}}
+
+/* Card */
+.card{background:#fff;border-radius:18px;padding:22px 20px;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.05)}
+
+/* Form */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.7em;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.field input,.field select{width:100%;padding:13px 14px;background:#f8f9fa;border:2px solid #e5e7eb;border-radius:12px;font-family:inherit;font-size:.95em;font-weight:600;color:#1a1a2e;-webkit-appearance:none;appearance:none;transition:border-color .2s}
+.field input:focus,.field select:focus{outline:none;border-color:#F97316;background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+
+/* Option pills */
+.opts{display:grid;gap:8px;margin-top:4px}
+.opts.c2{grid-template-columns:1fr 1fr}
+.opts.c3{grid-template-columns:repeat(3,1fr)}
+.opt{background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:13px 10px;cursor:pointer;text-align:center;font-size:.85em;font-weight:700;color:#1a1a2e;transition:all .2s}
+.opt:hover{border-color:#F97316;background:#fff7ed}
+.opt.on{border-color:#F97316;background:#fff7ed;color:#c2410c;box-shadow:0 4px 12px rgba(249,115,22,.15)}
+.opt small{display:block;font-size:.7em;font-weight:500;color:#9ca3af;margin-top:3px}
+.opt.on small{color:#ea580c}
+
+/* Buttons */
+.btn{display:block;width:100%;padding:16px;background:#F97316;color:#fff;border:none;border-radius:12px;font-family:'Staatliches',sans-serif;font-size:1.1em;letter-spacing:3px;cursor:pointer;transition:all .2s;margin-top:14px}
+.btn:hover{background:#ea580c;transform:translateY(-1px)}
+.btn:disabled{background:#e5e7eb;color:#9ca3af;cursor:not-allowed;transform:none}
+.btn.ghost{background:#fff;color:#1a1a2e;border:2px solid #e5e7eb}
+.btn.ghost:hover{border-color:#F97316;color:#F97316;background:#fff7ed}
+.back{color:#9ca3af;font-size:.85em;text-decoration:underline;background:none;border:none;cursor:pointer;font-family:inherit;margin-bottom:14px;padding:0}
+.back:hover{color:#F97316}
+
+/* Recommendation summary */
+.reco{background:#fff;border:2px solid #fed7aa;border-radius:18px;padding:20px;margin-bottom:18px}
+.reco h3{font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#F97316;margin-bottom:12px;font-size:1.1em;text-align:center}
+.reco .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:10px 14px;font-size:.8em;font-weight:700;color:#c2410c;text-align:center;flex:1;min-width:110px}
+.chip b{display:block;color:#1a1a2e;font-size:1.2em;margin-top:3px}
+
+/* Catalog */
+.catgroup{margin-bottom:22px}
+.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#1a1a2e;font-size:1em;padding-bottom:8px;border-bottom:2px solid #F97316;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.catgroup h4 span{font-family:'Montserrat',sans-serif;font-size:.7em;letter-spacing:0;color:#9ca3af;font-weight:600}
+.prod{display:flex;gap:12px;padding:12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;align-items:center}
+.prod:hover{border-color:#fed7aa}
+.prod.on{border-color:#F97316;background:#fff7ed}
+.prod .img{width:64px;height:64px;border-radius:10px;background:#f3f4f6 center/cover no-repeat;flex-shrink:0}
+.prod .meta{flex:1;min-width:0}
+.prod .title{font-weight:700;font-size:.88em;line-height:1.3;margin-bottom:4px}
+.prod .line{font-size:.72em;color:#9ca3af;display:flex;gap:8px;flex-wrap:wrap}
+.prod .line b{color:#1a1a2e;font-weight:700}
+.prod .price{font-family:'Staatliches',sans-serif;font-size:1.1em;letter-spacing:1px;color:#F97316;flex-shrink:0}
+.prod .check{width:24px;height:24px;border-radius:50%;border:2px solid #e5e7eb;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;font-size:.9em;color:#F97316;font-weight:900}
+.prod.on .check{background:#F97316;border-color:#F97316;color:#fff}
+.prod.reco{background:linear-gradient(90deg,#fff7ed 0%,#fff 50%);border-color:#fed7aa}
+.prod.reco::before{content:"RECO";font-family:'Staatliches',sans-serif;letter-spacing:1px;position:absolute;margin-left:-10px;margin-top:-6px;background:#F97316;color:#fff;font-size:.65em;padding:2px 6px;border-radius:4px}
+.empty{padding:14px;text-align:center;color:#9ca3af;font-size:.85em;background:#f8f9fa;border-radius:10px}
+
+/* Floating cart */
+.cart{position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#fff;padding:14px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.2);z-index:50;display:none;border-radius:16px 16px 0 0}
+.cart.show{display:block}
+.cart .row{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:760px;margin:0 auto}
+.cart .n{font-size:.75em;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.cart .t{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;color:#F97316}
+.cart button{padding:12px 20px;background:#F97316;color:#fff;border:none;border-radius:10px;font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:.95em;cursor:pointer}
+.cart button:hover{background:#ea580c}
+.cart .over{font-size:.7em;color:#ef4444;display:block;margin-top:2px}
+
+/* Loading */
+.loading{position:fixed;inset:0;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:200}
+.loading.hide{display:none}
+.spinner{width:44px;height:44px;border:4px solid #fed7aa;border-top-color:#F97316;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading p{color:#9ca3af;font-size:.85em}
+
+/* Warnings */
+.warn{background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:10px 14px;border-radius:10px;font-size:.8em;line-height:1.4;margin-bottom:14px}
+
+/* Footer */
+.foot{text-align:center;margin-top:30px;font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#9ca3af;font-size:.85em}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <p>Chargement du catalogue The Ridery…</p>
+</div>
+
+<div class="app">
+
+  <div class="brandbar">
+    <div class="logo">KEEP RIDING <b>The Ridery</b></div>
+    <div class="tag">Simulateur Devis</div>
+  </div>
+
+  <div class="progress"><i id="bar" style="width:20%"></i></div>
+
+  <!-- ============== SCREEN 0 : Discipline ============== -->
+  <section class="screen on" id="s0">
+    <h1>Trouve ton <span>setup</span></h1>
+    <p class="subtitle">Choisis ta discipline. On te propose un setup adapté à ton profil + le matos dispo en stock.</p>
+    <div class="pick">
+      <button data-d="wing">
+        <span class="icon">🪂</span>
+        <span class="name">WINGFOIL</span>
+        <span class="desc">Aile, planche, foil, accessoires</span>
+      </button>
+      <button data-d="kite">
+        <span class="icon">🪁</span>
+        <span class="name">KITESURF</span>
+        <span class="desc">Kite, barre, planche, harnais</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============== SCREEN 1 : Profil ============== -->
+  <section class="screen" id="s1">
+    <button class="back" data-back="s0">← Changer de discipline</button>
+    <h1>Ton <span id="discLabel">profil</span></h1>
+    <p class="subtitle">4 infos + ton budget, c'est parti.</p>
+
+    <div class="card">
+      <div class="field">
+        <label>Sexe</label>
+        <div class="opts c2" data-group="sex">
+          <div class="opt" data-v="H">Homme</div>
+          <div class="opt" data-v="F">Femme</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label>Poids (kg)</label><input type="number" id="f-poids" min="25" max="150" placeholder="ex. 75"></div>
+        <div class="field"><label>Taille (cm)</label><input type="number" id="f-taille" min="120" max="220" placeholder="ex. 178"></div>
+      </div>
+
+      <div class="field">
+        <label>Niveau</label>
+        <div class="opts c3" data-group="niveau">
+          <div class="opt" data-v="debutant">Débutant<small>1-10 sessions</small></div>
+          <div class="opt" data-v="intermediaire">Intermédiaire<small>11-30 sessions</small></div>
+          <div class="opt" data-v="confirme">Confirmé<small>&gt; 30 sessions</small></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Budget total (€)</label>
+        <input type="number" id="f-budget" min="100" step="50" placeholder="ex. 2500">
+      </div>
+    </div>
+
+    <button class="btn" id="go-reco" disabled>VOIR LES RECOMMANDATIONS →</button>
+  </section>
+
+  <!-- ============== SCREEN 2 : Reco + Catalogue ============== -->
+  <section class="screen" id="s2">
+    <button class="back" data-back="s1">← Modifier mon profil</button>
+    <h1>Ton <span>setup</span> recommandé</h1>
+
+    <div class="reco">
+      <h3>Tailles conseillées</h3>
+      <div class="chips" id="recoChips"></div>
+    </div>
+
+    <div id="stockWarn"></div>
+
+    <p class="subtitle" style="margin-top:8px">Coche le matos qui t'intéresse (on ne te montre que ce qui est en stock). Les items marqués <em style="color:#F97316;font-style:normal;font-weight:800">RECO</em> correspondent à la taille idéale pour toi.</p>
+
+    <div id="catalog"></div>
+
+    <button class="btn" id="go-contact">CONTINUER →</button>
+    <button class="btn ghost" data-back="s1">Recommencer</button>
+  </section>
+
+  <!-- ============== SCREEN 3 : Contact ============== -->
+  <section class="screen" id="s3">
+    <button class="back" data-back="s2">← Retour à la sélection</button>
+    <h1>Reçois ton <span>panier</span></h1>
+    <p class="subtitle">On t'envoie un lien direct qui ouvre le panier déjà rempli sur theridery.com.</p>
+
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label>Prénom *</label><input id="f-prenom" type="text"></div>
+        <div class="field"><label>Nom *</label><input id="f-nom" type="text"></div>
+      </div>
+      <div class="field"><label>Email *</label><input id="f-email" type="email" placeholder="toi@mail.com"></div>
+      <div class="field"><label>Téléphone</label><input id="f-tel" type="tel" placeholder="06 ..."></div>
+      <div class="field"><label>Message (optionnel)</label><input id="f-msg" type="text" placeholder="Questions, préférences, dates…"></div>
+    </div>
+
+    <button class="btn" id="go-send">ENVOYER MON DEVIS</button>
+  </section>
+
+  <!-- ============== SCREEN 4 : Done ============== -->
+  <section class="screen" id="s4">
+    <h1>C'est <span>parti</span> !</h1>
+    <p class="subtitle" id="doneMsg">On t'envoie le panier par mail dans quelques secondes. Tu peux aussi ouvrir le panier tout de suite :</p>
+    <a id="openCart" class="btn" href="#" target="_blank" rel="noopener">OUVRIR MON PANIER SUR THERIDERY.COM</a>
+    <button class="btn ghost" onclick="location.reload()">NOUVELLE SIMULATION</button>
+  </section>
+
+  <div class="foot">THE RIDERY — Paris · Marseille · Hyères · Bruxelles</div>
+</div>
+
+<div class="cart" id="cart">
+  <div class="row">
+    <div>
+      <span class="n" id="cartN">0 articles</span>
+      <div class="t" id="cartT">0 €</div>
+      <span class="over" id="cartOver" style="display:none"></span>
+    </div>
+    <button id="cartGo">VALIDER →</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================ */
+/*  CONFIG — editable par Kevin                                  */
+/* ============================================================ */
+var CFG={
+  STORE:'https://theridery.com',
+  PRODUCTS_URL:'https://theridery.com/products.json?limit=250',
+  STAFF_EMAIL:'marketing@theridery.com',
+  // Formspree optionnel (clé publique) pour envoi auto sans ouvrir le mail client
+  FORMSPREE_ID:null    // ex. 'xyzabcde' si tu crees un form sur formspree.io
+};
+
+/* ============================================================ */
+/*  TABLES DE RECOMMANDATION — reprises des simus existants     */
+/* ============================================================ */
+
+var WING_SIZING={
+  debutant:{
+    'l':{rigide:'80-100L',gonflable:'100-120L',foil:'1500-1750cm²',light:'4-4.5m²',medium:'3-3.5m²',strong:null},
+    'm':{rigide:'110-130L',gonflable:'130-160L',foil:'1750-2000cm²',light:'5-5.5m²',medium:'4-4.5m²',strong:null},
+    'h':{rigide:'≥140L',   gonflable:'≥160L',   foil:'2200cm²',     light:'6-7m²',  medium:'5-6m²',  strong:null}
+  },
+  intermediaire:{
+    'l':{rigide:'60-80L', gonflable:'80-100L',  foil:'1250-1500cm²',light:'4-4.5m²',  medium:'3-3.5m²',  strong:'2.5-3m²'},
+    'm':{rigide:'90-110L',gonflable:'110-120L', foil:'1500-1750cm²',light:'5-5.5m²',  medium:'4-4.5m²',  strong:'3.5-4m²'},
+    'h':{rigide:'≥120L',  gonflable:'≥140L',   foil:'2000-2200cm²',light:'6-7m²',    medium:'5-6m²',    strong:'4.5-5m²'}
+  },
+  confirme:{
+    'l':{rigide:'<60L',   gonflable:'60L',      foil:'<850cm²',     light:'4-4.5m²',  medium:'2.5-3.5m²',strong:'2.5-3.5m²'},
+    'm':{rigide:'35-60L', gonflable:'60-90L',   foil:'≤1000cm²',    light:'5-5.5m²',  medium:'3.5-4.5m²',strong:'3-4m²'},
+    'h':{rigide:'≥100L',  gonflable:'≥110L',   foil:'≤1200cm²',    light:'6-7m²',    medium:'4.5-5.5m²',strong:'4.5-5m²'}
+  }
+};
+
+var KITE_SIZING={
+  // [kite_light 12-15kn, kite_medium 18-22kn, kite_strong 25-30kn, board_length_cm]
+  debutant:{
+    'l':{light:'10-11m',medium:'8-9m',  strong:'7m',  board:'135-140 x 41-42',foil:null},
+    'm':{light:'12m',   medium:'10m',   strong:'8m',  board:'138-143 x 42-43',foil:null},
+    'h':{light:'13-14m',medium:'11-12m',strong:'9m',  board:'143-148 x 44',   foil:null}
+  },
+  intermediaire:{
+    'l':{light:'10-12m',medium:'8-9m',  strong:'6-7m',board:'132-138 x 40-41',foil:'1500cm²'},
+    'm':{light:'12-13m',medium:'9-10m', strong:'7-8m',board:'136-142 x 41-42',foil:'1500-1750cm²'},
+    'h':{light:'14-15m',medium:'11-12m',strong:'9m',  board:'142-148 x 43-44',foil:'1750-2000cm²'}
+  },
+  confirme:{
+    'l':{light:'9-11m', medium:'7-8m',  strong:'5-6m',board:'130-136 x 40',   foil:'1000-1250cm²'},
+    'm':{light:'11-12m',medium:'8-9m',  strong:'6-7m',board:'134-140 x 41-42',foil:'1250-1500cm²'},
+    'h':{light:'13-14m',medium:'10-11m',strong:'8-9m',board:'140-146 x 43-44',foil:'1500-1750cm²'}
+  }
+};
+
+function bucketPoids(p){return p<65?'l':p<95?'m':'h'}
+
+/* ============================================================ */
+/*  CATEGORISATION AUTO depuis les product_type/tags Shopify     */
+/* ============================================================ */
+/* On utilise des mots-cles pour ranger les produits dans les   */
+/* bonnes categories. Ajustable si Shopify change ses types.    */
+
+var CATEGORY_RULES=[
+  // Wing
+  {disc:'wing',cat:'aile',     label:'Ailes de wing',           icon:'🪂',kw:['wing','aile','wingfoil']},
+  {disc:'wing',cat:'planche_r',label:'Planches rigides',        icon:'🛹',kw:['planche rigide','board rigide','hard board','wingboard rigide']},
+  {disc:'wing',cat:'planche_g',label:'Planches gonflables',     icon:'💨',kw:['gonflable','inflatable','isup']},
+  {disc:'wing',cat:'foil',     label:'Foils',                   icon:'🐟',kw:['foil','mat','aile avant','stab']},
+  {disc:'wing',cat:'accessoire',label:'Harnais, leash & casque',icon:'🛟',kw:['harnais','leash','casque','impact','gilet','pompe']},
+  {disc:'wing',cat:'combi',    label:'Combinaisons & lycras',   icon:'🧥',kw:['combi','combinaison','wetsuit','lycra','neoprene']},
+
+  // Kite
+  {disc:'kite',cat:'kite',     label:'Ailes de kite',            icon:'🪁',kw:['kite','aile']},
+  {disc:'kite',cat:'barre',    label:'Barres',                   icon:'🎚️',kw:['barre','bar','control bar']},
+  {disc:'kite',cat:'planche_tt',label:'Planches twin-tip',       icon:'🛹',kw:['twintip','twin tip','planche kite','board kite','tt']},
+  {disc:'kite',cat:'planche_sf',label:'Planches surf / directional',icon:'🏄',kw:['surf kite','directional','wave']},
+  {disc:'kite',cat:'foil',     label:'Foils',                    icon:'🐟',kw:['foil']},
+  {disc:'kite',cat:'accessoire',label:'Harnais, leash & casque', icon:'🛟',kw:['harnais','leash','casque','impact','gilet','pompe']},
+  {disc:'kite',cat:'combi',    label:'Combinaisons & lycras',    icon:'🧥',kw:['combi','combinaison','wetsuit','lycra','neoprene']}
+];
+
+function matchCategory(product,disc){
+  var hay=(product.product_type+' '+product.title+' '+(product.tags||'')).toLowerCase();
+  // Priorite : on teste dans l'ordre, premier match gagne
+  for(var i=0;i<CATEGORY_RULES.length;i++){
+    var r=CATEGORY_RULES[i];
+    if(r.disc!==disc)continue;
+    for(var j=0;j<r.kw.length;j++){
+      if(hay.indexOf(r.kw[j])!==-1)return r.cat;
+    }
+  }
+  return null;
+}
+
+/* ============================================================ */
+/*  STATE                                                         */
+/* ============================================================ */
+var S={
+  discipline:null,         // 'wing' | 'kite'
+  profile:{sex:null,poids:null,taille:null,niveau:null,budget:null},
+  recommendation:null,     // output de getRecommendation
+  products:[],             // produits Shopify filtres (inStock only)
+  selected:{},             // variantId -> {qty, product, variant}
+  stockLoaded:false
+};
+
+/* ============================================================ */
+/*  FETCH CATALOGUE SHOPIFY                                      */
+/* ============================================================ */
+function fetchCatalog(){
+  return fetch(CFG.PRODUCTS_URL,{credentials:'omit'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(function(data){
+      var raw=data.products||[];
+      // Filtre : au moins 1 variant available=true
+      S.products=raw.filter(function(p){
+        return (p.variants||[]).some(function(v){return v.available===true});
+      });
+      S.stockLoaded=true;
+      console.log('[Ridery] Catalogue charge :',S.products.length,'produits en stock /',raw.length,'total');
+    })
+    .catch(function(err){
+      console.warn('[Ridery] Fetch produits KO :',err.message,'— mode degrade');
+      S.products=[];
+      S.stockLoaded=false;
+    });
+}
+
+/* ============================================================ */
+/*  RECOMMANDATION                                               */
+/* ============================================================ */
+function getRecommendation(){
+  var p=S.profile;
+  var b=bucketPoids(p.poids);
+  if(S.discipline==='wing'){
+    var r=WING_SIZING[p.niveau][b];
+    return {
+      discipline:'wing',
+      chips:[
+        {label:'Wing light',   value:r.light},
+        {label:'Wing medium',  value:r.medium},
+        r.strong?{label:'Wing fort',value:r.strong}:null,
+        {label:'Planche rigide',   value:r.rigide},
+        {label:'Planche gonflable',value:r.gonflable},
+        {label:'Foil (surface)',   value:r.foil}
+      ].filter(Boolean),
+      sizes:{
+        aile:[r.light,r.medium,r.strong].filter(Boolean),
+        planche:[r.rigide,r.gonflable],
+        foil:[r.foil]
+      }
+    };
+  } else {
+    var k=KITE_SIZING[p.niveau][b];
+    return {
+      discipline:'kite',
+      chips:[
+        {label:'Kite vent léger', value:k.light},
+        {label:'Kite medium',     value:k.medium},
+        {label:'Kite vent fort',  value:k.strong},
+        {label:'Twin-tip (cm)',   value:k.board},
+        k.foil?{label:'Kite-foil',value:k.foil}:null
+      ].filter(Boolean),
+      sizes:{
+        kite:[k.light,k.medium,k.strong],
+        planche:[k.board],
+        foil:k.foil?[k.foil]:[]
+      }
+    };
+  }
+}
+
+/* Extrait une taille numerique approximative depuis un titre de variant  */
+/* ex. "7m", "12m²", "140cm", "5.5" -> nombre ou null                     */
+function parseSize(str){
+  if(!str)return null;
+  var m=String(str).match(/(\d+(?:[.,]\d+)?)/);
+  if(!m)return null;
+  return parseFloat(m[1].replace(',','.'));
+}
+function parseRange(str){
+  var m=String(str).match(/(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)/);
+  if(m)return [parseFloat(m[1].replace(',','.')),parseFloat(m[2].replace(',','.'))];
+  var s=parseSize(str);return s==null?null:[s,s];
+}
+
+/* Le produit matche la taille recommandee ? */
+function matchesRecoSize(product,cat,reco){
+  var targets=[];
+  if(S.discipline==='wing'){
+    if(cat==='aile')targets=reco.sizes.aile;
+    else if(cat==='planche_r'||cat==='planche_g')targets=reco.sizes.planche;
+    else if(cat==='foil')targets=reco.sizes.foil;
+  } else {
+    if(cat==='kite')targets=reco.sizes.kite;
+    else if(cat==='planche_tt'||cat==='planche_sf')targets=reco.sizes.planche;
+    else if(cat==='foil')targets=reco.sizes.foil;
+  }
+  if(!targets||!targets.length)return false;
+  // compare variants par taille (variant.title ou option1)
+  var variants=product.variants||[];
+  for(var i=0;i<variants.length;i++){
+    if(!variants[i].available)continue;
+    var vSize=parseSize(variants[i].title||variants[i].option1);
+    if(vSize==null){
+      // fallback titre produit
+      vSize=parseSize(product.title);
+      if(vSize==null)continue;
+    }
+    for(var j=0;j<targets.length;j++){
+      var rng=parseRange(targets[j]);
+      if(!rng)continue;
+      var tol=0.75; // tolerance 0.75m ou 0.75L
+      if(vSize>=rng[0]-tol&&vSize<=rng[1]+tol)return true;
+    }
+  }
+  return false;
+}
+
+/* ============================================================ */
+/*  RENDER                                                       */
+/* ============================================================ */
+function el(id){return document.getElementById(id)}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on')});
+  el(id).classList.add('on');
+  var pct={s0:20,s1:40,s2:70,s3:90,s4:100}[id]||0;
+  el('bar').style.width=pct+'%';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderRecoChips(reco){
+  var html=reco.chips.map(function(c){
+    return '<div class="chip">'+c.label+'<b>'+c.value+'</b></div>';
+  }).join('');
+  el('recoChips').innerHTML=html;
+}
+
+function productCard(p,recoFlag){
+  var v=(p.variants||[]).find(function(x){return x.available})||p.variants[0];
+  var img=(p.images&&p.images[0]&&p.images[0].src)||'';
+  var vendor=p.vendor||'';
+  var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
+  var price=Math.round(parseFloat(v.price));
+  return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-price="'+price+'">'+
+    (img?'<div class="img" style="background-image:url('+img+')"></div>':'<div class="img"></div>')+
+    '<div class="meta">'+
+      '<div class="title">'+escapeHtml(p.title)+'</div>'+
+      '<div class="line">'+
+        (vendor?'<b>'+escapeHtml(vendor)+'</b>':'')+
+        (variantTitle?'<span>'+escapeHtml(variantTitle)+'</span>':'')+
+      '</div>'+
+    '</div>'+
+    '<div class="price">'+price+'€</div>'+
+    '<div class="check">✓</div>'+
+  '</div>';
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+
+function renderCatalog(){
+  var reco=S.recommendation;
+  var disc=S.discipline;
+  var cats=CATEGORY_RULES.filter(function(r){return r.disc===disc});
+  var html='';
+  var anyShown=false;
+
+  if(!S.stockLoaded){
+    el('stockWarn').innerHTML='<div class="warn">⚠️ Impossible de vérifier le stock en direct (probablement un bloqueur CORS local). Les produits sont affichés tel quels — merci de vérifier la dispo sur <a href="'+CFG.STORE+'" target="_blank">theridery.com</a> avant d\'envoyer le devis.</div>';
+  } else {
+    el('stockWarn').innerHTML='';
+  }
+
+  cats.forEach(function(rule){
+    var list=S.products.filter(function(p){return matchCategory(p,disc)===rule.cat});
+    // Tri : reco en premier, puis par prix croissant
+    list.forEach(function(p){p._reco=matchesRecoSize(p,rule.cat,reco)});
+    list.sort(function(a,b){
+      if(a._reco!==b._reco)return a._reco?-1:1;
+      var pa=parseFloat((a.variants[0]||{}).price||0);
+      var pb=parseFloat((b.variants[0]||{}).price||0);
+      return pa-pb;
+    });
+    if(!list.length)return;
+    anyShown=true;
+    html+='<div class="catgroup"><h4>'+rule.icon+' '+rule.label+' <span>'+list.length+' en stock</span></h4>';
+    html+=list.map(function(p){return productCard(p,p._reco)}).join('');
+    html+='</div>';
+  });
+
+  if(!anyShown){
+    html='<div class="empty">Pas de produits en stock trouvés pour cette discipline. Réessaye plus tard ou contacte la boutique : '+CFG.STAFF_EMAIL+'</div>';
+  }
+
+  el('catalog').innerHTML=html;
+
+  // Delegation click
+  el('catalog').onclick=function(e){
+    var row=e.target.closest('.prod');if(!row)return;
+    var vid=row.getAttribute('data-vid');
+    if(S.selected[vid]){
+      delete S.selected[vid];
+      row.classList.remove('on');
+    } else {
+      S.selected[vid]={
+        variantId:vid,
+        price:parseFloat(row.getAttribute('data-price')),
+        title:row.querySelector('.title').textContent
+      };
+      row.classList.add('on');
+    }
+    refreshCart();
+  };
+}
+
+function refreshCart(){
+  var ids=Object.keys(S.selected);
+  var n=ids.length;
+  var total=ids.reduce(function(s,k){return s+S.selected[k].price},0);
+  var bar=el('cart');
+  if(n===0){bar.classList.remove('show');return}
+  bar.classList.add('show');
+  el('cartN').textContent=n+' article'+(n>1?'s':'');
+  el('cartT').textContent=total+' €';
+  var over=el('cartOver');
+  if(S.profile.budget && total>S.profile.budget){
+    over.style.display='block';
+    over.textContent='Au-dessus du budget ('+S.profile.budget+'€) de '+(total-S.profile.budget)+'€';
+  } else {
+    over.style.display='none';
+  }
+}
+
+/* ============================================================ */
+/*  PANIER URL + ENVOI                                           */
+/* ============================================================ */
+function buildCartUrl(){
+  var parts=Object.keys(S.selected).map(function(vid){return vid+':1'});
+  if(!parts.length)return null;
+  return CFG.STORE+'/cart/'+parts.join(',');
+}
+
+function buildEmailBody(){
+  var p=S.profile;
+  var url=buildCartUrl();
+  var lines=[];
+  lines.push('Salut '+(el('f-prenom').value||'')+',');
+  lines.push('');
+  lines.push('Voici ton devis personnalisé The Ridery basé sur ta simulation :');
+  lines.push('');
+  lines.push('PROFIL');
+  lines.push('- Discipline : '+(S.discipline==='wing'?'Wingfoil':'Kitesurf'));
+  lines.push('- '+(p.sex==='H'?'Homme':'Femme')+', '+p.poids+'kg, '+p.taille+'cm');
+  lines.push('- Niveau : '+p.niveau);
+  lines.push('- Budget : '+p.budget+'€');
+  lines.push('');
+  lines.push('SETUP RECOMMANDÉ');
+  S.recommendation.chips.forEach(function(c){lines.push('- '+c.label+' : '+c.value)});
+  lines.push('');
+  lines.push('TON PANIER ('+Object.keys(S.selected).length+' articles)');
+  var total=0;
+  Object.keys(S.selected).forEach(function(k){
+    var it=S.selected[k];total+=it.price;
+    lines.push('- '+it.title+' — '+it.price+'€');
+  });
+  lines.push('');
+  lines.push('TOTAL : '+total+'€');
+  lines.push('');
+  if(url){
+    lines.push('👉 OUVRE TON PANIER SUR LE SITE :');
+    lines.push(url);
+    lines.push('');
+  }
+  lines.push('Une question ? Réponds à ce mail ou appelle-nous au 07 67 44 05 17 (Marseille).');
+  lines.push('');
+  lines.push('La team THE RIDERY');
+  lines.push('KEEP RIDING');
+  return lines.join('\n');
+}
+
+function sendDevis(){
+  var p=S.profile;
+  var prenom=el('f-prenom').value.trim();
+  var nom=el('f-nom').value.trim();
+  var email=el('f-email').value.trim();
+  var tel=el('f-tel').value.trim();
+  var msg=el('f-msg').value.trim();
+
+  if(!prenom||!nom||!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert('Prénom, nom et email valides sont requis.');return;
+  }
+
+  var body=buildEmailBody();
+  var url=buildCartUrl();
+  var subject='Ton devis The Ridery — '+(S.discipline==='wing'?'Wingfoil':'Kitesurf');
+
+  // 1. Envoi staff via Formspree si configure
+  if(CFG.FORMSPREE_ID){
+    fetch('https://formspree.io/f/'+CFG.FORMSPREE_ID,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        _subject:'[Simu] Devis '+S.discipline+' — '+prenom+' '+nom,
+        _replyto:email,
+        prenom:prenom,nom:nom,email:email,tel:tel,message:msg,
+        discipline:S.discipline,
+        profil:p.sex+' '+p.poids+'kg '+p.taille+'cm '+p.niveau+' budget '+p.budget+'€',
+        panier_url:url,
+        panier_detail:Object.keys(S.selected).map(function(k){return S.selected[k].title+' ('+S.selected[k].price+'€)'}).join(' | ')
+      })
+    }).catch(function(e){console.warn('Formspree KO',e)});
+  }
+
+  // 2. mailto: client (ouvre son mail avec le panier pre-rempli)
+  var mailto='mailto:'+encodeURIComponent(email)
+    +'?cc='+encodeURIComponent(CFG.STAFF_EMAIL)
+    +'&subject='+encodeURIComponent(subject)
+    +'&body='+encodeURIComponent(body);
+
+  // 3. Ecran de confirmation
+  el('openCart').href=url||CFG.STORE;
+  el('doneMsg').innerHTML='On t\'envoie le panier par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi ouvrir le panier tout de suite :';
+  show('s4');
+
+  // Ouvre le mail client du staff (pour qu'il puisse envoyer depuis sa boite)
+  // En interne : le staff clique sur "envoyer" et le client reçoit
+  setTimeout(function(){window.location.href=mailto},400);
+}
+
+/* ============================================================ */
+/*  VALIDATION + NAV                                             */
+/* ============================================================ */
+function validateProfile(){
+  var p=S.profile;
+  var poids=parseInt(el('f-poids').value,10);
+  var taille=parseInt(el('f-taille').value,10);
+  var budget=parseInt(el('f-budget').value,10);
+  p.poids=isNaN(poids)?null:poids;
+  p.taille=isNaN(taille)?null:taille;
+  p.budget=isNaN(budget)?null:budget;
+  var ok=p.sex&&p.poids&&p.taille&&p.niveau&&p.budget&&p.poids>=25&&p.taille>=120;
+  el('go-reco').disabled=!ok;
+  return ok;
+}
+
+/* ============================================================ */
+/*  BIND EVENTS                                                  */
+/* ============================================================ */
+document.querySelectorAll('.pick button').forEach(function(b){
+  b.onclick=function(){
+    S.discipline=b.getAttribute('data-d');
+    el('discLabel').textContent=S.discipline==='wing'?'profil wing':'profil kite';
+    show('s1');
+  };
+});
+
+document.querySelectorAll('[data-back]').forEach(function(b){
+  b.onclick=function(){show(b.getAttribute('data-back'))};
+});
+
+document.querySelectorAll('.opts').forEach(function(grp){
+  grp.onclick=function(e){
+    var o=e.target.closest('.opt');if(!o)return;
+    grp.querySelectorAll('.opt').forEach(function(x){x.classList.remove('on')});
+    o.classList.add('on');
+    var g=grp.getAttribute('data-group');
+    S.profile[g]=o.getAttribute('data-v');
+    validateProfile();
+  };
+});
+['f-poids','f-taille','f-budget'].forEach(function(id){
+  el(id).addEventListener('input',validateProfile);
+});
+
+el('go-reco').onclick=function(){
+  if(!validateProfile())return;
+  S.recommendation=getRecommendation();
+  renderRecoChips(S.recommendation);
+  renderCatalog();
+  show('s2');
+};
+
+el('go-contact').onclick=function(){
+  if(!Object.keys(S.selected).length){
+    alert('Sélectionne au moins un article.');return;
+  }
+  show('s3');
+};
+
+el('cartGo').onclick=function(){
+  if(el('s2').classList.contains('on'))show('s3');
+};
+
+el('go-send').onclick=sendDevis;
+
+/* ============================================================ */
+/*  BOOT                                                         */
+/* ============================================================ */
+fetchCatalog().then(function(){
+  el('loading').classList.add('hide');
+});
+
+})();
+</script>
+</body>
+</html>
