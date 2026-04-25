@@ -205,6 +205,16 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .warn{background:#fef3c7;border:1px solid #fde68a;color:#854d0e;padding:12px 16px;border-radius:var(--r-md);font-size:.82em;line-height:1.5;margin-bottom:14px;font-weight:600}
 .warn a{color:#854d0e;font-weight:800;text-decoration:underline}
 
+/* Toast notifications */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:14px 22px;border-radius:var(--r-md);font-size:.85em;font-weight:600;z-index:300;box-shadow:0 16px 40px rgba(11,17,32,.35);opacity:0;transition:all .32s cubic-bezier(.4,0,.2,1);max-width:90%;text-align:center;line-height:1.4}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.warn{background:#dc2626;box-shadow:0 16px 40px rgba(220,38,38,.35)}
+.toast.ok{background:#0d9488;box-shadow:0 16px 40px rgba(13,148,136,.35)}
+
+/* Stock verification loading state */
+.prod.checking,.packcard.checking,.bundle.checking{opacity:.55;pointer-events:none;position:relative}
+.prod.checking::before,.packcard.checking::before,.bundle.checking::before{content:'';position:absolute;top:50%;left:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border:3px solid var(--orange-l);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;z-index:5}
+
 /* Footer */
 .foot{text-align:center;margin-top:40px;font-family:'Staatliches',sans-serif;letter-spacing:2.5px;color:var(--muted-2);font-size:.85em;padding-top:24px;border-top:1px solid var(--line)}
 </style>
@@ -839,7 +849,7 @@ function productCard(p,recoFlag){
   var vendor=p.vendor||'';
   var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
   var price=Math.round(parseFloat(v.price));
-  return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-price="'+price+'">'+
+  return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'">'+
     (recoFlag?'<span class="reco-badge">RECO</span>':'')+
     (img?'<div class="img" style="background-image:url('+img+')"></div>':'<div class="img"></div>')+
     '<div class="meta">'+
@@ -857,6 +867,36 @@ function productCard(p,recoFlag){
 }
 
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+
+/* Verifie en live le stock d'un variant via l'endpoint non-cache .js de Shopify.
+   Renvoie une promesse boolean : true=disponible, false=rupture.
+   Fail-open si l'API echoue ou si pas de handle (on garde la card).               */
+function verifyStock(handle,variantId){
+  if(!handle)return Promise.resolve(true);
+  return fetch(CFG.STORE+'/products/'+handle+'.js',{credentials:'omit',cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(function(data){
+      var v=(data.variants||[]).find(function(x){return String(x.id)===String(variantId)});
+      return !!(v&&v.available===true);
+    })
+    .catch(function(err){
+      console.warn('[Ridery] verifyStock KO',handle,err.message);
+      return true; // fail-open
+    });
+}
+
+/* Toast non-bloquant en bas d'ecran. kind = '' | 'warn' | 'ok'. */
+function showToast(msg,kind){
+  var t=document.createElement('div');
+  t.className='toast '+(kind||'');
+  t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){t.classList.add('show')});
+  setTimeout(function(){
+    t.classList.remove('show');
+    setTimeout(function(){t.remove()},320);
+  },3600);
+}
 
 /* Renvoie une vignette pour 1 ligne de bundle. */
 function bundleLine(item){
@@ -889,7 +929,7 @@ function packCard(p){
   var v=(p.variants||[]).find(function(x){return x.available})||p.variants[0];
   var price=Math.round(parseFloat(v.price));
   var img=(p.images&&p.images[0]&&p.images[0].src)||'';
-  return '<div class="packcard" data-vid="'+v.id+'" data-price="'+price+'">'+
+  return '<div class="packcard" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'">'+
     '<div class="pimg" style="'+(img?'background-image:url('+img+')':'')+'"></div>'+
     '<div class="pmeta">'+
       '<div class="ptitle">'+escapeHtml(p.title)+'</div>'+
@@ -930,23 +970,40 @@ function renderBundles(){
 
   box.innerHTML=html;
 
-  // Click handler bundles
+  // Click handler bundles (verif stock live au moment du choix)
   box.onclick=function(e){
-    // Bouton CHOISIR
+    // Bouton CHOISIR : verif des 3 items en parallele avant d'engager
     var pick=e.target.closest('.pickbtn');
     if(pick){
       e.stopPropagation();
       var idx=parseInt(pick.getAttribute('data-pick'),10);
       var b=S.bundles[idx];if(!b)return;
       var card=pick.closest('.bundle');
+      if(card.classList.contains('checking'))return;
       var alreadyPicked=card.classList.contains('picked');
-      // Toggle : si deja choisi on retire, sinon on coche les 3 et on retire les autres bundles
-      box.querySelectorAll('.bundle.picked').forEach(function(c){c.classList.remove('picked')});
+      // Si deja choisi : on retire, pas besoin de verifier
       if(alreadyPicked){
         b.items.forEach(function(it){delete S.selected[it.variant.id]});
-      } else {
-        // Vide la selection precedente issue d'un autre bundle pour ne pas mixer
-        // (mais on garde les selections individuelles existantes)
+        card.classList.remove('picked');
+        syncCatalogChecks();refreshCart();
+        return;
+      }
+      // Sinon : verif live des 3 items
+      card.classList.add('checking');
+      Promise.all(b.items.map(function(it){
+        return verifyStock(it.product.handle,it.variant.id).then(function(ok){return {it:it,ok:ok}});
+      })).then(function(results){
+        card.classList.remove('checking');
+        var ko=results.filter(function(r){return !r.ok});
+        if(ko.length){
+          var names=ko.map(function(r){return r.it.product.vendor||r.it.product.title.split(' ')[0]}).join(', ');
+          showToast(ko.length+' produit'+(ko.length>1?'s':'')+' du setup vient d\'être vendu ('+names+'). Recharge pour recomposer.','warn');
+          // Marque visuellement les KO
+          card.style.opacity='.5';
+          card.style.pointerEvents='none';
+          return;
+        }
+        box.querySelectorAll('.bundle.picked').forEach(function(c){c.classList.remove('picked')});
         b.items.forEach(function(it){
           S.selected[it.variant.id]={
             variantId:it.variant.id,
@@ -955,28 +1012,42 @@ function renderBundles(){
           };
         });
         card.classList.add('picked');
-      }
-      // Met a jour les checks dans le catalogue
-      syncCatalogChecks();
-      refreshCart();
+        syncCatalogChecks();
+        refreshCart();
+      });
       return;
     }
-    // Pack : toggle selection
+    // Pack : toggle selection (verif live au moment du select)
     var pack=e.target.closest('.packcard');
     if(pack){
+      if(pack.classList.contains('checking'))return;
       var vid=pack.getAttribute('data-vid');
+      var handle=pack.getAttribute('data-handle');
       if(S.selected[vid]){
         delete S.selected[vid];
         pack.classList.remove('on');
-      } else {
+        refreshCart();
+        return;
+      }
+      pack.classList.add('checking');
+      verifyStock(handle,vid).then(function(ok){
+        pack.classList.remove('checking');
+        if(!ok){
+          showToast('Désolé, ce pack vient d\'être vendu.','warn');
+          pack.style.transition='opacity .35s,transform .35s';
+          pack.style.opacity='0';
+          pack.style.transform='scale(.95)';
+          setTimeout(function(){pack.remove()},360);
+          return;
+        }
         S.selected[vid]={
           variantId:vid,
           price:parseFloat(pack.getAttribute('data-price')),
           title:pack.querySelector('.ptitle').textContent
         };
         pack.classList.add('on');
-      }
-      refreshCart();
+        refreshCart();
+      });
     }
   };
 }
@@ -1058,24 +1129,39 @@ function renderCatalog(){
 
   el('catalog').innerHTML=html;
 
-  // Delegation click : h4 = toggle accordeon, .prod = toggle selection
+  // Delegation click : h4 = toggle accordeon, .prod = toggle selection (verif stock live)
   el('catalog').onclick=function(e){
     var head=e.target.closest('.catgroup>h4');
     if(head){head.parentNode.classList.toggle('open');return}
     var row=e.target.closest('.prod');if(!row)return;
+    if(row.classList.contains('checking'))return;
     var vid=row.getAttribute('data-vid');
+    var handle=row.getAttribute('data-handle');
     if(S.selected[vid]){
       delete S.selected[vid];
       row.classList.remove('on');
-    } else {
+      refreshCart();
+      return;
+    }
+    row.classList.add('checking');
+    verifyStock(handle,vid).then(function(ok){
+      row.classList.remove('checking');
+      if(!ok){
+        showToast('Désolé, vient d\'être vendu sur le shop.','warn');
+        row.style.transition='opacity .35s,transform .35s';
+        row.style.opacity='0';
+        row.style.transform='scale(.95)';
+        setTimeout(function(){row.remove()},360);
+        return;
+      }
       S.selected[vid]={
         variantId:vid,
         price:parseFloat(row.getAttribute('data-price')),
         title:row.querySelector('.title').textContent
       };
       row.classList.add('on');
-    }
-    refreshCart();
+      refreshCart();
+    });
   };
 }
 
