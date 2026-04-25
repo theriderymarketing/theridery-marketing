@@ -837,6 +837,7 @@ function show(id){
   el(id).classList.add('on');
   var pct={s0:20,s1:40,s2:70,s3:90,s4:100}[id]||0;
   el('bar').style.width=pct+'%';
+  if(id==='s3'||id==='s4'){var c=el('cart');if(c)c.classList.remove('show')}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
