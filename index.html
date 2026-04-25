@@ -363,6 +363,10 @@ var CFG={
   STORE:'https://theridery.com',
   COLLECTIONS_URL:'https://theridery.com/collections.json?limit=250',
   STAFF_EMAIL:'marketing@theridery.com',
+  // Klaviyo Public API Key (Site ID, 6 chars). Browser-safe.
+  KLAVIYO_SITE_ID:'R2W6jR',
+  // Nom du metric Klaviyo declenche par le simulateur (cree auto au 1er event)
+  KLAVIYO_METRIC:'Marketing Simulator Submitted',
   // Formspree optionnel (clé publique) pour envoi auto sans ouvrir le mail client
   FORMSPREE_ID:null,    // ex. 'xyzabcde' si tu crees un form sur formspree.io
   // Seuil de correspondance taille. Score = ratio variant_size / target_center.
@@ -1230,6 +1234,65 @@ function buildEmailBody(){
   return lines.join('\n');
 }
 
+/* Normalise un telephone FR vers E.164 (ex: 0612345678 -> +33612345678).
+   Retourne '' si format inexploitable (Klaviyo skipera le champ).               */
+function normPhoneFR(raw){
+  if(!raw)return '';
+  var d=String(raw).replace(/[^\d+]/g,'');
+  if(/^\+\d{10,15}$/.test(d))return d;
+  if(/^0\d{9}$/.test(d))return '+33'+d.slice(1);
+  if(/^33\d{9}$/.test(d))return '+'+d;
+  if(/^\d{9}$/.test(d))return '+33'+d;
+  return '';
+}
+
+/* Construit le HTML qui sera reinjecte dans le template Klaviyo via {{ event.items_html }}. */
+function buildItemsHtml(){
+  var rows=Object.keys(S.selected).map(function(k){
+    var it=S.selected[k];
+    return '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;">'+escapeHtml(it.title)+'</td>'+
+           '<td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-family:Arial,sans-serif;font-size:14px;color:#F97316;font-weight:700;white-space:nowrap;">'+it.price+'€</td></tr>';
+  }).join('');
+  var total=Object.keys(S.selected).reduce(function(s,k){return s+S.selected[k].price},0);
+  return '<table style="width:100%;border-collapse:collapse;margin:0 0 12px"><tbody>'+rows+
+         '<tr><td style="padding:12px 0;font-family:Arial,sans-serif;font-size:15px;color:#1a1a2e;font-weight:700;">TOTAL</td>'+
+         '<td style="padding:12px 0;text-align:right;font-family:Arial,sans-serif;font-size:18px;color:#F97316;font-weight:700;">'+total+'€</td></tr></tbody></table>';
+}
+
+function buildRecosHtml(){
+  if(!S.recommendation||!S.recommendation.chips)return '';
+  return '<table style="width:100%;border-collapse:collapse"><tbody>'+
+    S.recommendation.chips.map(function(c){
+      return '<tr><td style="padding:6px 0;font-family:Arial,sans-serif;font-size:13px;color:#6b7280;">'+escapeHtml(c.label)+'</td>'+
+             '<td style="padding:6px 0;text-align:right;font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;font-weight:700;">'+escapeHtml(c.value)+'</td></tr>';
+    }).join('')+
+  '</tbody></table>';
+}
+
+/* Push event vers Klaviyo (browser-safe, public API). Resoud true en cas d'OK. */
+function pushKlaviyoEvent(payload){
+  if(!CFG.KLAVIYO_SITE_ID)return Promise.resolve(false);
+  var url='https://a.klaviyo.com/client/events?company_id='+encodeURIComponent(CFG.KLAVIYO_SITE_ID);
+  return fetch(url,{
+    method:'POST',
+    mode:'cors',
+    headers:{'Content-Type':'application/json','revision':'2024-10-15'},
+    body:JSON.stringify({
+      data:{
+        type:'event',
+        attributes:{
+          properties:payload.properties,
+          metric:{data:{type:'metric',attributes:{name:CFG.KLAVIYO_METRIC}}},
+          profile:{data:{type:'profile',attributes:payload.profile}}
+        }
+      }
+    })
+  }).then(function(r){
+    if(r.status===202||r.ok)return true;
+    return r.text().then(function(t){console.warn('[Klaviyo]',r.status,t);return false});
+  }).catch(function(err){console.warn('[Klaviyo] KO',err.message);return false});
+}
+
 function sendDevis(){
   var p=S.profile;
   var prenom=el('f-prenom').value.trim();
@@ -1242,11 +1305,65 @@ function sendDevis(){
     alert('Prénom, nom et email valides sont requis.');return;
   }
 
-  var body=buildEmailBody();
-  var url=buildCartUrl();
-  var subject='Ton devis The Ridery — '+(S.discipline==='wing'?'Wingfoil':'Kitesurf');
+  var url=buildCartUrl()||CFG.STORE;
+  var total=Object.keys(S.selected).reduce(function(s,k){return s+S.selected[k].price},0);
+  var disciplineLabel=S.discipline==='wing'?'Wingfoil':'Kitesurf';
+  var profilStr=(p.sex==='H'?'Homme':'Femme')+' · '+p.poids+'kg · '+p.taille+'cm · '+p.niveau;
+  var phoneE164=normPhoneFR(tel);
 
-  // 1. Envoi staff via Formspree si configure
+  var profile={
+    email:email,
+    first_name:prenom,
+    last_name:nom,
+    properties:{
+      discipline:S.discipline,
+      niveau:p.niveau,
+      poids_kg:p.poids,
+      taille_cm:p.taille,
+      sexe:p.sex,
+      derniere_simu_budget:p.budget,
+      derniere_simu_total:total
+    }
+  };
+  if(phoneE164)profile.phone_number=phoneE164;
+
+  var properties={
+    discipline:S.discipline,
+    discipline_label:disciplineLabel,
+    profil:profilStr,
+    sexe:p.sex,
+    poids_kg:p.poids,
+    taille_cm:p.taille,
+    niveau:p.niveau,
+    budget:p.budget,
+    total:total,
+    over_budget:total>p.budget,
+    cart_url:url,
+    nb_items:Object.keys(S.selected).length,
+    items:Object.keys(S.selected).map(function(k){
+      return {variant_id:k,title:S.selected[k].title,price:S.selected[k].price};
+    }),
+    items_html:buildItemsHtml(),
+    recos:S.recommendation.chips.map(function(c){return {label:c.label,value:c.value}}),
+    recos_html:buildRecosHtml(),
+    message:msg||null,
+    telephone:tel||null,
+    source:'theriderymarketing.github.io'
+  };
+
+  // UI : ecran de confirmation immediat (pas d'attente Klaviyo bloquante)
+  el('openCart').href=url;
+  el('doneMsg').innerHTML='On t\'envoie le panier par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
+  show('s4');
+
+  // Push Klaviyo en arriere-plan
+  pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
+    if(!ok){
+      el('doneMsg').innerHTML='Ton panier est prêt. <b>Clique ci-dessous pour l\'ouvrir directement sur The Ridery.</b><br><span style="font-size:.85em;color:#9ca3af">(Si tu n\'as pas reçu l\'email dans 5 min, écris à marketing@theridery.com)</span>';
+    }
+  });
+
+  // Optionnel : Formspree fallback si configure
   if(CFG.FORMSPREE_ID){
     fetch('https://formspree.io/f/'+CFG.FORMSPREE_ID,{
       method:'POST',
@@ -1255,28 +1372,11 @@ function sendDevis(){
         _subject:'[Simu] Devis '+S.discipline+' — '+prenom+' '+nom,
         _replyto:email,
         prenom:prenom,nom:nom,email:email,tel:tel,message:msg,
-        discipline:S.discipline,
-        profil:p.sex+' '+p.poids+'kg '+p.taille+'cm '+p.niveau+' budget '+p.budget+'€',
-        panier_url:url,
-        panier_detail:Object.keys(S.selected).map(function(k){return S.selected[k].title+' ('+S.selected[k].price+'€)'}).join(' | ')
+        discipline:S.discipline,profil:profilStr,
+        panier_url:url,total:total
       })
     }).catch(function(e){console.warn('Formspree KO',e)});
   }
-
-  // 2. mailto: client (ouvre son mail avec le panier pre-rempli)
-  var mailto='mailto:'+encodeURIComponent(email)
-    +'?cc='+encodeURIComponent(CFG.STAFF_EMAIL)
-    +'&subject='+encodeURIComponent(subject)
-    +'&body='+encodeURIComponent(body);
-
-  // 3. Ecran de confirmation
-  el('openCart').href=url||CFG.STORE;
-  el('doneMsg').innerHTML='On t\'envoie le panier par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi ouvrir le panier tout de suite :';
-  show('s4');
-
-  // Ouvre le mail client du staff (pour qu'il puisse envoyer depuis sa boite)
-  // En interne : le staff clique sur "envoyer" et le client reçoit
-  setTimeout(function(){window.location.href=mailto},400);
 }
 
 /* ============================================================ */
