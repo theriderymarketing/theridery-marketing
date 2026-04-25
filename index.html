@@ -541,20 +541,22 @@ function pickCollection(collections,targetTitles){
     if(ct.indexOf(target)!==-1)return 100;       // contient
     return 0;
   }
-  // Pour chaque target dans l'ordre, prend la collection avec score >= seuil ET plus de produits.
-  for(var t=0;t<targets.length;t++){
-    var best=null,bestScore=0;
-    for(var i=0;i<collections.length;i++){
-      var s=score(collections[i].title,targets[t]);
-      if(s===0)continue;
-      var pc=collections[i].products_count||0;
-      // priorise score * log(produits) pour favoriser les grosses collections
-      var weight=s*1000+pc;
-      if(weight>bestScore){bestScore=weight;best=collections[i]}
+  // Évalue TOUS les targets et toutes les collections, prend le meilleur global.
+  // Weight = score * 1000 + products_count (favorise les collections avec plus de matos).
+  var best=null,bestWeight=0;
+  for(var i=0;i<collections.length;i++){
+    var c=collections[i];
+    var pc=c.products_count||0;
+    var maxScore=0;
+    for(var t=0;t<targets.length;t++){
+      var s=score(c.title,targets[t]);
+      if(s>maxScore)maxScore=s;
     }
-    if(best&&bestScore>=100*1000)return best;  // au moins un "contient" avec produits
+    if(maxScore===0)continue;
+    var weight=maxScore*1000+pc;
+    if(weight>bestWeight){bestWeight=weight;best=c}
   }
-  return null;
+  return bestWeight>=100*1000?best:null;
 }
 
 /* ============================================================ */
