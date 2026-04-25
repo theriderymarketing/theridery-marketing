@@ -166,6 +166,13 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .catgroup .items{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 14px}
 .catgroup.open{grid-column:1/-1}
 .catgroup.open .items{max-height:20000px;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;background:var(--bg-2)}
+.catgroup .toolbar{display:none;padding:12px 14px;background:var(--paper);border-bottom:1px solid var(--line-2);align-items:center;gap:14px;flex-wrap:wrap;font-size:.78em}
+.catgroup.open .toolbar{display:flex}
+.catgroup .toolbar .grp{display:inline-flex;align-items:center;gap:6px;background:var(--bg-2);border:1px solid var(--line);border-radius:99px;padding:3px}
+.catgroup .toolbar .grp button{background:transparent;border:none;padding:7px 14px;border-radius:99px;font-family:inherit;font-weight:800;font-size:.86em;color:var(--muted);cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:all .2s;box-shadow:none}
+.catgroup .toolbar .grp button:hover{color:var(--ink)}
+.catgroup .toolbar .grp button.on{background:var(--orange);color:#fff;box-shadow:0 3px 10px rgba(34,216,200,.3)}
+.catgroup .toolbar .lbl{font-size:.78em;font-weight:800;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;flex-shrink:0}
 
 .prod{position:relative;display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer;transition:all .2s;box-shadow:var(--shadow-l)}
 .prod:hover{border-color:var(--orange);transform:translateY(-2px);box-shadow:var(--shadow)}
@@ -1000,7 +1007,7 @@ function showToast(msg,kind){
 function bundleLine(item){
   var img=(item.product.images&&item.product.images[0]&&item.product.images[0].src)||'';
   var lbl=(item.product.vendor?item.product.vendor+' ':'')+item.product.title;
-  return '<div class="litem">'+
+  return '<div class="litem" data-handle="'+escapeHtml(item.product.handle||'')+'" data-vid="'+item.variant.id+'" data-price="'+item.variant.price+'" data-image="'+escapeHtml(img||'')+'" style="cursor:pointer">'+
     '<div class="imgmini" style="'+(img?'background-image:url('+img+')':'')+'"></div>'+
     '<div class="label">'+escapeHtml(lbl)+'</div>'+
     '<div class="px">'+item.variant.price+'€</div>'+
@@ -1070,6 +1077,21 @@ function renderBundles(){
 
   // Click handler bundles (verif stock live au moment du choix)
   box.onclick=function(e){
+    // Click sur une ligne d'un setup -> ouvre la modale produit
+    var litem=e.target.closest('.litem');
+    if(litem){
+      e.stopPropagation();
+      var lh=litem.getAttribute('data-handle');
+      if(lh){
+        openProductModal(lh,{
+          vendor:'',
+          title:litem.querySelector('.label').textContent,
+          price:parseFloat(litem.getAttribute('data-price')),
+          variantId:parseInt(litem.getAttribute('data-vid'),10)
+        });
+      }
+      return;
+    }
     // Bouton CHOISIR : verif des 3 items en parallele avant d'engager
     var pick=e.target.closest('.pickbtn');
     if(pick){
@@ -1117,7 +1139,7 @@ function renderBundles(){
       });
       return;
     }
-    // Pack : toggle selection (verif live au moment du select)
+    // Pack : si deja selectionne -> retire ; sinon ouvre la modale
     var pack=e.target.closest('.packcard');
     if(pack){
       if(pack.classList.contains('checking'))return;
@@ -1129,25 +1151,12 @@ function renderBundles(){
         refreshCart();
         return;
       }
-      pack.classList.add('checking');
-      verifyStock(handle,vid).then(function(ok){
-        pack.classList.remove('checking');
-        if(!ok){
-          showToast('Désolé, ce pack vient d\'être vendu.','warn');
-          pack.style.transition='opacity .35s,transform .35s';
-          pack.style.opacity='0';
-          pack.style.transform='scale(.95)';
-          setTimeout(function(){pack.remove()},360);
-          return;
-        }
-        S.selected[vid]={
-          variantId:vid,
-          price:parseFloat(pack.getAttribute('data-price')),
-          title:pack.querySelector('.ptitle').textContent,
-          image:pack.getAttribute('data-image')||''
-        };
-        pack.classList.add('on');
-        refreshCart();
+      // Ouvre la modale produit (l'utilisateur ajoute via le bouton AJOUTER)
+      openProductModal(handle,{
+        vendor:pack.querySelector('.pvendor')?pack.querySelector('.pvendor').textContent:'',
+        title:pack.querySelector('.ptitle').textContent,
+        price:parseFloat(pack.getAttribute('data-price')),
+        variantId:parseInt(vid,10)
       });
     }
   };
@@ -1161,6 +1170,43 @@ function syncCatalogChecks(){
     if(S.selected[vid])row.classList.add('on');
     else row.classList.remove('on');
   });
+}
+
+/* Extrait la taille numerique pour tri (variants ou titre).
+   9999 si introuvable -> les non-dimensionnes finissent en queue. */
+function getProductSize(p){
+  var vs=p.variants||[];
+  for(var i=0;i<vs.length;i++){
+    var ps=parseSizeWithUnit(vs[i].title)||parseSizeWithUnit(vs[i].option1);
+    if(ps)return ps.value;
+  }
+  var pt=parseSizeWithUnit(p.title);
+  return pt?pt.value:9999;
+}
+
+/* Trie une liste : taille ASC primaire, prix selon dir ('asc'|'desc') secondaire. */
+function sortProducts(list,priceDir){
+  return list.slice().sort(function(a,b){
+    if(a._size!==b._size)return a._size-b._size;
+    var pa=parseFloat((a.variants[0]||{}).price||0);
+    var pb=parseFloat((b.variants[0]||{}).price||0);
+    return priceDir==='desc'?pb-pa:pa-pb;
+  });
+}
+
+/* Re-rend les items d'une catgroup selon filter+sort courants. */
+function renderCatItems(cat){
+  var box=document.querySelector('.catgroup[data-cat="'+cat.key+'"] .items');
+  if(!box||!cat._all)return;
+  var st=cat._state||{recoOnly:true,priceDir:'asc'};
+  var list=cat._all.filter(function(p){return st.recoOnly?p._reco:true});
+  list=sortProducts(list,st.priceDir);
+  if(!list.length){
+    box.innerHTML='<div class="empty" style="grid-column:1/-1">Aucun produit pour ce filtre.'+(cat.handle?' <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#22d8c8">Voir toute la collection</a>':'')+'</div>';
+    return;
+  }
+  box.innerHTML=list.map(function(p){return productCard(p,p._reco)}).join('');
+  syncCatalogChecks();
 }
 
 function renderCatalog(){
@@ -1178,7 +1224,6 @@ function renderCatalog(){
   cats.forEach(function(cat){
     var list=(cat.products||[]).slice();
     if(!list.length){
-      // Pas de collection resolue ou vide — on affiche quand meme un header + lien
       if(cat.handle){
         html+='<div class="catgroup" data-cat="'+cat.key+'">'+
           '<h4><span class="lbl">'+cat.label+'</span>'+
@@ -1188,23 +1233,16 @@ function renderCatalog(){
       }
       return;
     }
-    // Score de proximite + filtrage : on garde seulement les produits >= seuil.
-    // Categories non dimensionnees (barre) : tout passe.
+    // Score + size + filtrage par seuil
     var THRESHOLD=cat.sized?(CFG.MATCH_THRESHOLD||0.75):0;
     list.forEach(function(p){
       var r=recoCloseness(p,cat.key,reco);
       p._score=r.score;
-      p._reco=r.inRange;
+      p._reco=cat.sized?r.inRange:true; // non-sized = tout reco
+      p._size=getProductSize(p);
     });
     var totalAvailable=list.length;
     list=list.filter(function(p){return !cat.sized||p._score>=THRESHOLD});
-    list.sort(function(a,b){
-      if(a._reco!==b._reco)return a._reco?-1:1;
-      if(b._score!==a._score)return b._score-a._score;
-      var pa=parseFloat((a.variants[0]||{}).price||0);
-      var pb=parseFloat((b.variants[0]||{}).price||0);
-      return pa-pb;
-    });
     if(!list.length){
       anyShown=true;
       html+='<div class="catgroup" data-cat="'+cat.key+'">'+
@@ -1215,12 +1253,28 @@ function renderCatalog(){
       return;
     }
     anyShown=true;
+    cat._all=list;
+    cat._state={recoOnly:true,priceDir:'asc'};
     var recoCount=list.filter(function(p){return p._reco}).length;
+    var initial=sortProducts(list.filter(function(p){return p._reco}),'asc');
+    if(!initial.length)initial=sortProducts(list,'asc');
     html+='<div class="catgroup" data-cat="'+cat.key+'">'+
       '<h4><span class="lbl">'+cat.label+'</span>'+
       '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
       '<span class="arrow">+</span></h4>'+
-      '<div class="items">'+list.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
+      '<div class="toolbar">'+
+        '<span class="lbl">Filtre</span>'+
+        '<div class="grp" data-grp="filter">'+
+          '<button class="on" data-v="reco">Reco</button>'+
+          '<button data-v="all">Tous</button>'+
+        '</div>'+
+        '<span class="lbl" style="margin-left:auto">Prix (à taille égale)</span>'+
+        '<div class="grp" data-grp="price">'+
+          '<button class="on" data-v="asc">↑ - cher</button>'+
+          '<button data-v="desc">↓ + cher</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="items">'+initial.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
     '</div>';
   });
 
@@ -1230,8 +1284,26 @@ function renderCatalog(){
 
   el('catalog').innerHTML=html;
 
-  // Delegation click : h4 = toggle accordeon, .prod = ouvre la modale produit
+  // Delegation click : toolbar > h4 toggle > .prod modale
   el('catalog').onclick=function(e){
+    // Toolbar filter/sort
+    var btn=e.target.closest('.catgroup .toolbar .grp button');
+    if(btn){
+      e.stopPropagation();
+      var grpEl=btn.parentNode;
+      var grpName=grpEl.getAttribute('data-grp');
+      var v=btn.getAttribute('data-v');
+      var catKey=btn.closest('.catgroup').getAttribute('data-cat');
+      var catObj=(CATEGORY_MAP[S.discipline]||[]).find(function(c){return c.key===catKey});
+      if(!catObj)return;
+      grpEl.querySelectorAll('button').forEach(function(b){b.classList.remove('on')});
+      btn.classList.add('on');
+      catObj._state=catObj._state||{recoOnly:true,priceDir:'asc'};
+      if(grpName==='filter')catObj._state.recoOnly=(v==='reco');
+      if(grpName==='price')catObj._state.priceDir=v;
+      renderCatItems(catObj);
+      return;
+    }
     var head=e.target.closest('.catgroup>h4');
     if(head){head.parentNode.classList.toggle('open');return}
     var row=e.target.closest('.prod');if(!row)return;
