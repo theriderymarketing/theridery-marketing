@@ -276,9 +276,10 @@ var CFG={
   STAFF_EMAIL:'marketing@theridery.com',
   // Formspree optionnel (clé publique) pour envoi auto sans ouvrir le mail client
   FORMSPREE_ID:null,    // ex. 'xyzabcde' si tu crees un form sur formspree.io
-  // Seuil de correspondance taille (0.75 = 75% de proximite avec la fourchette reco).
-  // Augmente vers 0.85+ si tu veux encore moins de produits, ou baisse a 0.65 pour plus.
-  MATCH_THRESHOLD:0.78
+  // Seuil de correspondance taille. Score = ratio variant_size / target_center.
+  // Score 1.0 = pile dans le range. 0.5 = ~25% d'ecart relatif au centre.
+  // Defaut 0.5 = on garde tout ce qui est dans +/-25% (ex: 5-5.5m² => 4.1m² a 6.4m² OK).
+  MATCH_THRESHOLD:0.5
 };
 
 /* ============================================================ */
@@ -334,13 +335,13 @@ function bucketPoids(p){return p<65?'l':p<95?'m':'h'}
 
 var CATEGORY_MAP={
   wing:[
-    {key:'aile',     titles:['ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing',          icon:'🪂', sized:true},
-    {key:'planche_r',titles:['planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides',       icon:'🛹', sized:true},
-    {key:'planche_g',titles:['planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', icon:'💨', sized:true},
-    {key:'foil',     titles:['foils wing','foil wing','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts',         icon:'🐟', sized:true}
+    {key:'aile',     titles:['ailes de wingfoil','ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing',          icon:'🪂', sized:true},
+    {key:'planche_r',titles:['planches rigides wingfoil','planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides',       icon:'🛹', sized:true},
+    {key:'planche_g',titles:['planches gonflables wingfoil','planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', icon:'💨', sized:true},
+    {key:'foil',     titles:['foil complet wing','foil complet','foils wing','foil wing','foil','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts',         icon:'🐟', sized:true}
   ],
   kite:[
-    {key:'kite',     titles:['ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', icon:'🪁', sized:true},
+    {key:'kite',     titles:['ailes de kitesurf','ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', icon:'🪁', sized:true},
     {key:'planche',  titles:['planches kitesurf','planches kite','twintips','twintip','twin tip','kiteboards'], unit:'cm', label:'Planches',  icon:'🛹', sized:true},
     {key:'barre',    titles:['barres de kite','barres kite','barres','control bars'], unit:null, label:'Barres',    icon:'🎚️', sized:false}
   ]
@@ -348,20 +349,33 @@ var CATEGORY_MAP={
 
 function normStr(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
 
-/* Trouve la meilleure collection pour une liste de titres cibles. */
+/* Trouve la meilleure collection pour une liste de titres cibles.
+   Strategie : on parcourt les targets en ordre de priorite. Pour chaque target on
+   collecte toutes les collections qui matchent (exact > prefix > contains) et on
+   prend celle avec le plus de produits. Permet de privilegier "Ailes de Wingfoil"
+   (102 produits) sur "Aile de Wingfoil F-One" (29 produits) pour le target "wing". */
 function pickCollection(collections,targetTitles){
-  var targets=targetTitles.map(normStr);
-  // 1. Exact match
-  for(var i=0;i<collections.length;i++){
-    var ct=normStr(collections[i].title);
-    if(targets.indexOf(ct)!==-1)return collections[i];
+  var targets=targetTitles.map(normStr).filter(Boolean);
+  function score(colTitle,target){
+    var ct=normStr(colTitle);
+    if(ct===target)return 1000;
+    if(ct.indexOf(target)===0)return 500;        // commence par
+    if(ct.indexOf(' '+target)!==-1)return 300;   // mot exact
+    if(ct.indexOf(target)!==-1)return 100;       // contient
+    return 0;
   }
-  // 2. Collection title CONTAINS target
-  for(var i=0;i<collections.length;i++){
-    var ct=normStr(collections[i].title);
-    for(var j=0;j<targets.length;j++){
-      if(targets[j]&&ct.indexOf(targets[j])!==-1)return collections[i];
+  // Pour chaque target dans l'ordre, prend la collection avec score >= seuil ET plus de produits.
+  for(var t=0;t<targets.length;t++){
+    var best=null,bestScore=0;
+    for(var i=0;i<collections.length;i++){
+      var s=score(collections[i].title,targets[t]);
+      if(s===0)continue;
+      var pc=collections[i].products_count||0;
+      // priorise score * log(produits) pour favoriser les grosses collections
+      var weight=s*1000+pc;
+      if(weight>bestScore){bestScore=weight;best=collections[i]}
     }
+    if(best&&bestScore>=100*1000)return best;  // au moins un "contient" avec produits
   }
   return null;
 }
@@ -556,17 +570,16 @@ function recoCloseness(product,catKey,reco){
       if(rUnit!==expectedUnit)continue;
 
       var lo=rng.lo,hi=rng.hi;
-      var center=(lo+hi)/2;
-      var width=Math.max(hi-lo,1);
+      var center=(lo+hi)/2||1;
       var v=ps.value;
       var score,inRange=false;
       if(v>=lo&&v<=hi){
         score=1;inRange=true;
       } else {
-        // distance hors range, normalisee par la moitie du range (au moins) ou par le centre
+        // Score = 1 - ecart_relatif_au_centre. 0% ecart => 1, 50% ecart => 0.
         var dist=v<lo?lo-v:v-hi;
-        var ref=Math.max(width/2,center*0.15);
-        score=Math.max(0,1-dist/ref);
+        var rel=dist/center;
+        score=Math.max(0,1-rel*2);  // 25% ecart => score 0.5, 50% => 0
       }
       if(score>bestScore){bestScore=score;bestInRange=inRange}
     }
@@ -666,6 +679,7 @@ function renderCatalog(){
       return pa-pb;
     });
     if(!list.length){
+      anyShown=true;
       html+='<div class="catgroup" data-cat="'+cat.key+'">'+
         '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
         '<span class="count">0 dans ta taille</span><span class="arrow">▶</span></h4>'+
