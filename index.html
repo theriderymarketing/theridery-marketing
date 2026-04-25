@@ -79,18 +79,21 @@ h2 em{color:#F97316;font-style:normal}
 .chip b{display:block;color:#1a1a2e;font-size:1.2em;margin-top:3px}
 
 /* Catalog */
-.catgroup{margin-bottom:10px;border:2px solid #e5e7eb;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s}
+/* Catalog en ligne (cartes cote a cote) */
+#catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.catgroup{border:2px solid #e5e7eb;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s;display:flex;flex-direction:column}
 .catgroup.open{border-color:#F97316}
-.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:2px;color:#1a1a2e;font-size:1.05em;margin:0;padding:16px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;background:#fff;transition:background .2s}
+.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:1.5px;color:#1a1a2e;font-size:.95em;margin:0;padding:14px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;background:#fff;transition:background .2s;text-align:center}
 .catgroup h4:hover{background:#fff7ed}
-.catgroup.open h4{background:linear-gradient(90deg,#fff7ed,#fff)}
-.catgroup h4 .ico{font-size:1.2em}
-.catgroup h4 .lbl{flex:1}
-.catgroup h4 .count{font-family:'Montserrat',sans-serif;font-size:.72em;letter-spacing:0;color:#9ca3af;font-weight:600}
-.catgroup h4 .arrow{color:#F97316;font-weight:900;transition:transform .25s;display:inline-block;width:16px;text-align:center}
+.catgroup.open h4{background:linear-gradient(180deg,#fff7ed,#fff)}
+.catgroup h4 .ico{font-size:1.6em}
+.catgroup h4 .lbl{flex:0 0 auto}
+.catgroup h4 .count{font-family:'Montserrat',sans-serif;font-size:.7em;letter-spacing:0;color:#F97316;font-weight:700}
+.catgroup h4 .arrow{color:#F97316;font-weight:900;transition:transform .25s;display:inline-block}
 .catgroup.open h4 .arrow{transform:rotate(90deg)}
-.catgroup .items{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 14px}
-.catgroup.open .items{max-height:20000px;padding:4px 14px 14px}
+.catgroup .items{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 12px}
+.catgroup.open{grid-column:1/-1}
+.catgroup.open .items{max-height:20000px;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
 .prod{position:relative;display:flex;gap:14px;padding:12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;align-items:center}
 .prod:hover{border-color:#fed7aa}
 .prod.on{border-color:#F97316;background:#fff7ed}
