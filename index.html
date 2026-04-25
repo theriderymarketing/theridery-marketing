@@ -853,7 +853,7 @@ function productCard(p,recoFlag){
   var vendor=p.vendor||'';
   var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
   var price=Math.round(parseFloat(v.price));
-  return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'">'+
+  return '<div class="prod'+(recoFlag?' reco':'')+'" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'" data-image="'+escapeHtml(img||'')+'">'+
     (recoFlag?'<span class="reco-badge">RECO</span>':'')+
     (img?'<div class="img" style="background-image:url('+img+')"></div>':'<div class="img"></div>')+
     '<div class="meta">'+
@@ -933,7 +933,7 @@ function packCard(p){
   var v=(p.variants||[]).find(function(x){return x.available})||p.variants[0];
   var price=Math.round(parseFloat(v.price));
   var img=(p.images&&p.images[0]&&p.images[0].src)||'';
-  return '<div class="packcard" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'">'+
+  return '<div class="packcard" data-vid="'+v.id+'" data-handle="'+escapeHtml(p.handle||'')+'" data-price="'+price+'" data-image="'+escapeHtml(img||'')+'">'+
     '<div class="pimg" style="'+(img?'background-image:url('+img+')':'')+'"></div>'+
     '<div class="pmeta">'+
       '<div class="ptitle">'+escapeHtml(p.title)+'</div>'+
@@ -1009,10 +1009,12 @@ function renderBundles(){
         }
         box.querySelectorAll('.bundle.picked').forEach(function(c){c.classList.remove('picked')});
         b.items.forEach(function(it){
+          var bImg=(it.product.images&&it.product.images[0]&&it.product.images[0].src)||'';
           S.selected[it.variant.id]={
             variantId:it.variant.id,
             price:it.variant.price,
-            title:(it.product.vendor?it.product.vendor+' ':'')+it.product.title
+            title:(it.product.vendor?it.product.vendor+' ':'')+it.product.title,
+            image:bImg
           };
         });
         card.classList.add('picked');
@@ -1047,7 +1049,8 @@ function renderBundles(){
         S.selected[vid]={
           variantId:vid,
           price:parseFloat(pack.getAttribute('data-price')),
-          title:pack.querySelector('.ptitle').textContent
+          title:pack.querySelector('.ptitle').textContent,
+          image:pack.getAttribute('data-image')||''
         };
         pack.classList.add('on');
         refreshCart();
@@ -1161,7 +1164,8 @@ function renderCatalog(){
       S.selected[vid]={
         variantId:vid,
         price:parseFloat(row.getAttribute('data-price')),
-        title:row.querySelector('.title').textContent
+        title:row.querySelector('.title').textContent,
+        image:row.getAttribute('data-image')||''
       };
       row.classList.add('on');
       refreshCart();
@@ -1246,17 +1250,34 @@ function normPhoneFR(raw){
   return '';
 }
 
-/* Construit le HTML qui sera reinjecte dans le template Klaviyo via {{ event.items_html }}. */
+/* Construit le HTML qui sera reinjecte dans le template Klaviyo via {{ event.items_html }}.
+   Chaque article : image 110x110 + titre + prix.                                    */
 function buildItemsHtml(){
-  var rows=Object.keys(S.selected).map(function(k){
+  var keys=Object.keys(S.selected);
+  var html='';
+  keys.forEach(function(k,i){
     var it=S.selected[k];
-    return '<tr><td style="padding:8px 0;border-bottom:1px solid #eee;font-family:Arial,sans-serif;font-size:14px;color:#1a1a2e;">'+escapeHtml(it.title)+'</td>'+
-           '<td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;font-family:Arial,sans-serif;font-size:14px;color:#F97316;font-weight:700;white-space:nowrap;">'+it.price+'€</td></tr>';
-  }).join('');
-  var total=Object.keys(S.selected).reduce(function(s,k){return s+S.selected[k].price},0);
-  return '<table style="width:100%;border-collapse:collapse;margin:0 0 12px"><tbody>'+rows+
-         '<tr><td style="padding:12px 0;font-family:Arial,sans-serif;font-size:15px;color:#1a1a2e;font-weight:700;">TOTAL</td>'+
-         '<td style="padding:12px 0;text-align:right;font-family:Arial,sans-serif;font-size:18px;color:#F97316;font-weight:700;">'+total+'€</td></tr></tbody></table>';
+    var img=it.image||'';
+    html+='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:14px 0;border-collapse:separate;"><tr>'+
+      '<td width="110" valign="middle" style="width:110px;padding:0 16px 0 0;">'+
+        (img
+          ?'<img src="'+escapeHtml(img)+'" alt="" width="110" height="110" style="display:block;width:110px;height:110px;border-radius:12px;border:1px solid #eef0f4;object-fit:cover;background:#fbf7f0;">'
+          :'<div style="width:110px;height:110px;border-radius:12px;background:#fbf7f0;border:1px solid #eef0f4;"></div>')+
+      '</td>'+
+      '<td valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#0b1120;line-height:1.45;font-weight:600;padding:0 8px 0 0;">'+escapeHtml(it.title)+'</td>'+
+      '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:24px;color:#F97316;letter-spacing:1px;white-space:nowrap;padding-left:10px;">'+it.price+'€</td>'+
+    '</tr></table>';
+    if(i<keys.length-1){
+      html+='<div style="height:1px;background:#eef0f4;font-size:0;line-height:0;margin:0;">&nbsp;</div>';
+    }
+  });
+  var total=keys.reduce(function(s,k){return s+S.selected[k].price},0);
+  html+='<div style="height:2px;background:#0b1120;font-size:0;line-height:0;margin:18px 0 12px 0;">&nbsp;</div>';
+  html+='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'+
+    '<td valign="middle" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:20px;color:#0b1120;letter-spacing:2.5px;text-transform:uppercase;padding:4px 0;">Total</td>'+
+    '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:32px;color:#F97316;letter-spacing:1.5px;line-height:1;">'+total+'€</td>'+
+  '</tr></table>';
+  return html;
 }
 
 function buildRecosHtml(){
