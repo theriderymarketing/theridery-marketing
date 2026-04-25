@@ -18,14 +18,14 @@
   --paper:#ffffff;
   --bg:#f5f1ea;
   --bg-2:#fbf7f0;
-  --orange:#2A9D8F;
-  --orange-d:#1F7568;
-  --orange-l:#D1EBE7;
-  --orange-soft:#E8F5F3;
+  --orange:#14B8A6;
+  --orange-d:#0F766E;
+  --orange-l:#CCFBF1;
+  --orange-soft:#CCFBF1;
   --teal:#0ea5b5;
   --shadow:0 8px 28px rgba(11,17,32,.06);
   --shadow-l:0 2px 10px rgba(11,17,32,.04);
-  --shadow-h:0 18px 40px rgba(42,157,143,.18);
+  --shadow-h:0 18px 40px rgba(20,184,166,.18);
   --r-lg:20px;
   --r-md:14px;
   --r-sm:10px;
@@ -44,7 +44,7 @@ body{background:radial-gradient(1200px 600px at 80% -10%,#ffe9d3 0%,transparent 
 
 /* Progress */
 .progress{height:5px;background:rgba(11,17,32,.06);border-radius:99px;overflow:hidden;margin-bottom:32px;position:relative}
-.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--orange) 0%,#3FB5A7 50%,var(--orange-d) 100%);transition:width .5s cubic-bezier(.4,0,.2,1);border-radius:99px;box-shadow:0 0 12px rgba(42,157,143,.4)}
+.progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--orange) 0%,#2DD4BF 50%,var(--orange-d) 100%);transition:width .5s cubic-bezier(.4,0,.2,1);border-radius:99px;box-shadow:0 0 12px rgba(20,184,166,.4)}
 
 /* Screens */
 .screen{display:none}
@@ -61,7 +61,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 /* Discipline picker */
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
 .pick button{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:42px 24px;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);font-family:inherit;text-align:left;box-shadow:var(--shadow-l);overflow:hidden}
-.pick button::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(42,157,143,.05) 100%);transition:opacity .25s;opacity:0}
+.pick button::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 60%,rgba(20,184,166,.05) 100%);transition:opacity .25s;opacity:0}
 .pick button::after{content:'';position:absolute;top:24px;right:24px;width:36px;height:36px;background:var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .25s}
 .pick button:hover{border-color:var(--orange);transform:translateY(-4px);box-shadow:var(--shadow-h)}
 .pick button:hover::before{opacity:1}
@@ -79,7 +79,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .field label{display:block;font-size:.7em;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
 .field input,.field select{width:100%;padding:14px 16px;background:var(--bg-2);border:1.5px solid var(--line);border-radius:var(--r-md);font-family:inherit;font-size:.98em;font-weight:600;color:var(--ink);-webkit-appearance:none;appearance:none;transition:all .2s}
 .field input::placeholder{color:var(--muted-2);font-weight:500}
-.field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 4px rgba(42,157,143,.1)}
+.field input:focus,.field select:focus{outline:none;border-color:var(--orange);background:#fff;box-shadow:0 0 0 4px rgba(20,184,166,.1)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 
@@ -91,11 +91,11 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .opt:hover{border-color:var(--orange);background:var(--orange-soft)}
 .opt.on{border-color:var(--orange);background:var(--ink);color:#fff;box-shadow:0 6px 16px rgba(11,17,32,.18)}
 .opt small{display:block;font-size:.7em;font-weight:600;color:var(--muted-2);margin-top:4px}
-.opt.on small{color:#5BC4B6}
+.opt.on small{color:#5EEAD4}
 
 /* Buttons */
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:18px;background:linear-gradient(135deg,var(--orange) 0%,var(--orange-d) 100%);color:#fff;border:none;border-radius:var(--r-md);font-family:'Staatliches',sans-serif;font-size:1.15em;letter-spacing:3px;cursor:pointer;transition:all .25s;margin-top:16px;box-shadow:0 8px 22px rgba(42,157,143,.3);text-decoration:none}
-.btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(42,157,143,.42)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:18px;background:linear-gradient(135deg,var(--orange) 0%,var(--orange-d) 100%);color:#fff;border:none;border-radius:var(--r-md);font-family:'Staatliches',sans-serif;font-size:1.15em;letter-spacing:3px;cursor:pointer;transition:all .25s;margin-top:16px;box-shadow:0 8px 22px rgba(20,184,166,.3);text-decoration:none}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(20,184,166,.42)}
 .btn:active{transform:translateY(0)}
 .btn:disabled{background:var(--line);color:var(--muted-2);cursor:not-allowed;transform:none;box-shadow:none}
 .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
@@ -105,7 +105,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
 /* Reco summary */
 .reco{background:linear-gradient(135deg,var(--ink) 0%,#1e2a4a 100%);color:#fff;border-radius:var(--r-lg);padding:24px;margin-bottom:18px;position:relative;overflow:hidden;box-shadow:0 14px 36px rgba(11,17,32,.18)}
-.reco::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(42,157,143,.25),transparent 70%);pointer-events:none}
+.reco::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(20,184,166,.25),transparent 70%);pointer-events:none}
 .reco h3{font-family:'Staatliches',sans-serif;letter-spacing:2.5px;color:var(--orange);margin-bottom:16px;font-size:1.05em;text-align:left;display:flex;align-items:center;gap:10px}
 .reco h3::before{content:'';width:24px;height:2px;background:var(--orange);border-radius:2px}
 .reco .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
@@ -133,8 +133,8 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .bundle .total small{display:block;font-family:'Montserrat',sans-serif;font-size:.4em;letter-spacing:1px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-top:4px}
 .bundle.over .total{color:#ef4444}
 .bundle .pickbtn{padding:10px 16px;background:var(--ink);color:#fff;border:none;border-radius:var(--r-sm);font-family:'Staatliches',sans-serif;letter-spacing:1.8px;font-size:.85em;cursor:pointer;transition:all .2s;box-shadow:0 4px 12px rgba(11,17,32,.18)}
-.bundle .pickbtn:hover{background:var(--orange);transform:translateY(-1px);box-shadow:0 6px 14px rgba(42,157,143,.3)}
-.bundle.picked{background:linear-gradient(135deg,var(--orange-soft) 0%,#fff 100%);border-color:var(--orange);box-shadow:0 12px 28px rgba(42,157,143,.18)}
+.bundle .pickbtn:hover{background:var(--orange);transform:translateY(-1px);box-shadow:0 6px 14px rgba(20,184,166,.3)}
+.bundle.picked{background:linear-gradient(135deg,var(--orange-soft) 0%,#fff 100%);border-color:var(--orange);box-shadow:0 12px 28px rgba(20,184,166,.18)}
 .bundle.picked .pickbtn{background:var(--orange)}
 
 .packcard{display:flex;gap:14px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow-l)}
@@ -166,7 +166,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
 .prod{position:relative;display:flex;flex-direction:column;gap:10px;padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer;transition:all .2s;box-shadow:var(--shadow-l)}
 .prod:hover{border-color:var(--orange);transform:translateY(-2px);box-shadow:var(--shadow)}
-.prod.on{border-color:var(--orange);background:var(--orange-soft);box-shadow:0 8px 20px rgba(42,157,143,.18)}
+.prod.on{border-color:var(--orange);background:var(--orange-soft);box-shadow:0 8px 20px rgba(20,184,166,.18)}
 .prod .img{width:100%;aspect-ratio:1/1;border-radius:var(--r-sm);background:var(--bg-2) center/cover no-repeat;border:1px solid var(--line-2)}
 .prod .meta{display:flex;flex-direction:column;gap:4px;min-width:0}
 .prod .title{font-weight:700;font-size:.85em;line-height:1.3;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
@@ -177,8 +177,8 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .prod .check{position:relative;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);background:var(--paper);flex-shrink:0;transition:all .2s}
 .prod.on .check{background:var(--orange);border-color:var(--orange)}
 .prod.on .check::after{content:'';position:absolute;left:6px;top:3px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
-.prod.reco{background:linear-gradient(180deg,var(--orange-soft) 0%,var(--paper) 60%);border-color:#A6DFD8}
-.reco-badge{position:absolute;top:-8px;left:10px;background:var(--orange);color:#fff;font-family:'Staatliches',sans-serif;letter-spacing:1.5px;font-size:.7em;padding:4px 9px;border-radius:6px;box-shadow:0 4px 10px rgba(42,157,143,.4);z-index:2}
+.prod.reco{background:linear-gradient(180deg,var(--orange-soft) 0%,var(--paper) 60%);border-color:#99F6E4}
+.reco-badge{position:absolute;top:-8px;left:10px;background:var(--orange);color:#fff;font-family:'Staatliches',sans-serif;letter-spacing:1.5px;font-size:.7em;padding:4px 9px;border-radius:6px;box-shadow:0 4px 10px rgba(20,184,166,.4);z-index:2}
 .empty{padding:18px;text-align:center;color:var(--muted);font-size:.85em;background:var(--paper);border-radius:var(--r-md);border:1px dashed var(--line);grid-column:1/-1}
 .empty a{color:var(--orange);font-weight:700;text-decoration:none}
 .empty a:hover{text-decoration:underline}
@@ -190,7 +190,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .cart .row{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .cart .n{font-size:.7em;color:var(--muted-2);text-transform:uppercase;letter-spacing:1.5px;font-weight:800}
 .cart .t{font-family:'Staatliches',sans-serif;font-size:1.6em;letter-spacing:2px;color:#fff;line-height:1;margin-top:2px}
-.cart button{padding:13px 22px;background:var(--orange);color:#fff;border:none;border-radius:var(--r-sm);font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:1em;cursor:pointer;box-shadow:0 6px 18px rgba(42,157,143,.4);transition:all .2s}
+.cart button{padding:13px 22px;background:var(--orange);color:#fff;border:none;border-radius:var(--r-sm);font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:1em;cursor:pointer;box-shadow:0 6px 18px rgba(20,184,166,.4);transition:all .2s}
 .cart button:hover{background:var(--orange-d);transform:translateY(-1px)}
 .cart .over{font-size:.7em;color:#fca5a5;display:block;margin-top:4px;font-weight:700}
 
@@ -303,7 +303,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
     <div id="bundles"></div>
 
-    <p class="subtitle" style="margin-top:8px">Coche le matos qui t'intéresse (on ne te montre que ce qui est en stock). Les items marqués <em style="color:#2A9D8F;font-style:normal;font-weight:800">RECO</em> correspondent à la taille idéale pour toi.</p>
+    <p class="subtitle" style="margin-top:8px">Coche le matos qui t'intéresse (on ne te montre que ce qui est en stock). Les items marqués <em style="color:#14B8A6;font-style:normal;font-weight:800">RECO</em> correspondent à la taille idéale pour toi.</p>
 
     <div id="catalog"></div>
 
@@ -1089,7 +1089,7 @@ function renderCatalog(){
         html+='<div class="catgroup" data-cat="'+cat.key+'">'+
           '<h4><span class="lbl">'+cat.label+'</span>'+
           '<span class="count">0 en stock</span><span class="arrow">+</span></h4>'+
-          '<div class="items"><div class="empty">Rien en stock sur cette catégorie pour le moment. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#2A9D8F">Voir la collection</a></div></div>'+
+          '<div class="items"><div class="empty">Rien en stock sur cette catégorie pour le moment. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#14B8A6">Voir la collection</a></div></div>'+
         '</div>';
       }
       return;
@@ -1116,7 +1116,7 @@ function renderCatalog(){
       html+='<div class="catgroup" data-cat="'+cat.key+'">'+
         '<h4><span class="lbl">'+cat.label+'</span>'+
         '<span class="count">0 dans ta taille</span><span class="arrow">+</span></h4>'+
-        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#2A9D8F">Voir toute la collection ('+totalAvailable+' produits)</a></div></div>'+
+        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#14B8A6">Voir toute la collection ('+totalAvailable+' produits)</a></div></div>'+
       '</div>';
       return;
     }
@@ -1265,7 +1265,7 @@ function buildItemsHtml(){
           :'<div style="width:110px;height:110px;border-radius:12px;background:#fbf7f0;border:1px solid #eef0f4;"></div>')+
       '</td>'+
       '<td valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#0b1120;line-height:1.45;font-weight:600;padding:0 8px 0 0;">'+escapeHtml(it.title)+'</td>'+
-      '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:24px;color:#2A9D8F;letter-spacing:1px;white-space:nowrap;padding-left:10px;">'+it.price+'€</td>'+
+      '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:24px;color:#14B8A6;letter-spacing:1px;white-space:nowrap;padding-left:10px;">'+it.price+'€</td>'+
     '</tr></table>';
     if(i<keys.length-1){
       html+='<div style="height:1px;background:#eef0f4;font-size:0;line-height:0;margin:0;">&nbsp;</div>';
@@ -1275,7 +1275,7 @@ function buildItemsHtml(){
   html+='<div style="height:2px;background:#0b1120;font-size:0;line-height:0;margin:18px 0 12px 0;">&nbsp;</div>';
   html+='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'+
     '<td valign="middle" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:20px;color:#0b1120;letter-spacing:2.5px;text-transform:uppercase;padding:4px 0;">Total</td>'+
-    '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:32px;color:#2A9D8F;letter-spacing:1.5px;line-height:1;">'+total+'€</td>'+
+    '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:32px;color:#14B8A6;letter-spacing:1.5px;line-height:1;">'+total+'€</td>'+
   '</tr></table>';
   return html;
 }
@@ -1302,10 +1302,10 @@ function buildRecosHtml(){
   return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0;"><tr>'+
     cards.map(function(c){
       return '<td width="25%" valign="top" align="center" style="padding:5px;">'+
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#E8F5F3;border-radius:10px;"><tr>'+
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#CCFBF1;border-radius:10px;"><tr>'+
           '<td align="center" style="padding:14px 6px;">'+
             '<p style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:9px;letter-spacing:1px;color:#94a3b8;font-weight:800;text-transform:uppercase;line-height:1.2;">'+escapeHtml(c.label)+'</p>'+
-            '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2A9D8F;font-weight:800;line-height:1.25;">'+escapeHtml(c.value)+'</p>'+
+            '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#14B8A6;font-weight:800;line-height:1.25;">'+escapeHtml(c.value)+'</p>'+
           '</td>'+
         '</tr></table>'+
       '</td>';
