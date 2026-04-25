@@ -79,8 +79,10 @@ h2 em{color:#F97316;font-style:normal}
 .chip b{display:block;color:#1a1a2e;font-size:1.2em;margin-top:3px}
 
 /* Catalog */
-/* Catalog en ligne (cartes cote a cote) */
-#catalog{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+/* Catalog en ligne (4 cartes cote a cote, force) */
+#catalog{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:780px){#catalog{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:420px){#catalog{grid-template-columns:1fr}}
 .catgroup{border:2px solid #e5e7eb;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s;display:flex;flex-direction:column}
 .catgroup.open{border-color:#F97316}
 .catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:1.5px;color:#1a1a2e;font-size:.95em;margin:0;padding:14px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;background:#fff;transition:background .2s;text-align:center}
@@ -513,6 +515,16 @@ function parseSizeWithUnit(str){
   return {value:n,unit:u};
 }
 
+function normUnit(u){
+  if(!u)return null;
+  u=String(u).toLowerCase();
+  if(u==='m²'||u==='m2'||u==='m')return 'm²';
+  if(u==='cm²'||u==='cm2')return 'cm²';
+  if(u==='cm')return 'cm';
+  if(u==='l')return 'L';
+  return u;
+}
+
 function parseRangeWithUnit(str){
   if(!str)return null;
   var s=String(str).toLowerCase().replace('²','2');
@@ -520,18 +532,17 @@ function parseRangeWithUnit(str){
   var m=s.match(re);
   if(m){
     var lo=parseFloat(m[1].replace(',','.')),hi=parseFloat(m[2].replace(',','.'));
-    return {lo:lo,hi:hi,unit:m[3]?(m[3].replace('m2','m²').replace('cm2','cm²')):null};
+    return {lo:lo,hi:hi,unit:normUnit(m[3])};
   }
-  // single value
   var single=parseSizeWithUnit(str);
   if(single)return {lo:single.value,hi:single.value,unit:single.unit};
-  // borne seule ex. ≥140L, <60L
   var mb=s.match(/(\d+(?:[.,]\d+)?)\s*(cm2|m2|cm|l\b|m\b)/);
   if(mb){
     var v=parseFloat(mb[1].replace(',','.'));
-    if(/≥|>=/.test(s))return {lo:v,hi:v*2,unit:mb[2]};
-    if(/≤|<=|</.test(s))return {lo:0,hi:v,unit:mb[2]};
-    return {lo:v,hi:v,unit:mb[2]};
+    var u=normUnit(mb[2]);
+    if(/≥|>=/.test(s))return {lo:v,hi:v*2,unit:u};
+    if(/≤|<=|</.test(s))return {lo:0,hi:v,unit:u};
+    return {lo:v,hi:v,unit:u};
   }
   return null;
 }
@@ -650,7 +661,6 @@ function renderCatalog(){
     el('stockWarn').innerHTML='';
   }
 
-  var firstOpened=false;
   cats.forEach(function(cat){
     var list=(cat.products||[]).slice();
     if(!list.length){
@@ -692,8 +702,7 @@ function renderCatalog(){
     }
     anyShown=true;
     var recoCount=list.filter(function(p){return p._reco}).length;
-    var openAttr=!firstOpened?' open':'';firstOpened=true;
-    html+='<div class="catgroup'+openAttr+'" data-cat="'+cat.key+'">'+
+    html+='<div class="catgroup" data-cat="'+cat.key+'">'+
       '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
       '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
       '<span class="arrow">▶</span></h4>'+
