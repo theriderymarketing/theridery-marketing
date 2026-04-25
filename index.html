@@ -275,7 +275,10 @@ var CFG={
   COLLECTIONS_URL:'https://theridery.com/collections.json?limit=250',
   STAFF_EMAIL:'marketing@theridery.com',
   // Formspree optionnel (clé publique) pour envoi auto sans ouvrir le mail client
-  FORMSPREE_ID:null    // ex. 'xyzabcde' si tu crees un form sur formspree.io
+  FORMSPREE_ID:null,    // ex. 'xyzabcde' si tu crees un form sur formspree.io
+  // Seuil de correspondance taille (0.75 = 75% de proximite avec la fourchette reco).
+  // Augmente vers 0.85+ si tu veux encore moins de produits, ou baisse a 0.65 pour plus.
+  MATCH_THRESHOLD:0.78
 };
 
 /* ============================================================ */
@@ -516,13 +519,13 @@ function parseRangeWithUnit(str){
   return null;
 }
 
-/* Le produit matche-t-il la taille recommandee ? Exige la bonne unite.           */
-function matchesRecoSize(product,catKey,reco){
+/* Score de proximite entre 0 (loin) et 1 (parfait). Exige la bonne unite.        */
+/* Renvoie {score, inRange} : inRange=true => RECO badge.                         */
+function recoCloseness(product,catKey,reco){
   var cat=(CATEGORY_MAP[S.discipline]||[]).find(function(c){return c.key===catKey});
-  if(!cat||!cat.sized)return false;
+  if(!cat||!cat.sized)return {score:1,inRange:false};
   var expectedUnit=cat.unit;
 
-  // Resout les tailles cibles pour cette categorie
   var targets=[];
   if(S.discipline==='wing'){
     if(catKey==='aile')targets=reco.sizes.aile;
@@ -534,18 +537,15 @@ function matchesRecoSize(product,catKey,reco){
     else if(catKey==='planche')targets=reco.sizes.planche;
   }
   targets=(targets||[]).filter(Boolean);
-  if(!targets.length)return false;
-
-  // Tolerance par unite
-  var tol={'m²':0.75,'L':15,'cm²':300,'cm':5}[expectedUnit]||0;
+  if(!targets.length)return {score:0,inRange:false};
 
   var variants=product.variants||[];
+  var bestScore=0,bestInRange=false;
+
   for(var i=0;i<variants.length;i++){
     if(!variants[i].available)continue;
-    // Parse taille du variant (titre variant d'abord, puis titre produit)
     var ps=parseSizeWithUnit(variants[i].title)||parseSizeWithUnit(variants[i].option1)||parseSizeWithUnit(product.title);
     if(!ps)continue;
-    // Unite doit matcher (normalise "m"=>"m²" pour ailes)
     var pUnit=ps.unit==='m'?'m²':ps.unit;
     if(pUnit!==expectedUnit)continue;
 
@@ -554,10 +554,29 @@ function matchesRecoSize(product,catKey,reco){
       if(!rng)continue;
       var rUnit=rng.unit||expectedUnit;
       if(rUnit!==expectedUnit)continue;
-      if(ps.value>=rng.lo-tol&&ps.value<=rng.hi+tol)return true;
+
+      var lo=rng.lo,hi=rng.hi;
+      var center=(lo+hi)/2;
+      var width=Math.max(hi-lo,1);
+      var v=ps.value;
+      var score,inRange=false;
+      if(v>=lo&&v<=hi){
+        score=1;inRange=true;
+      } else {
+        // distance hors range, normalisee par la moitie du range (au moins) ou par le centre
+        var dist=v<lo?lo-v:v-hi;
+        var ref=Math.max(width/2,center*0.15);
+        score=Math.max(0,1-dist/ref);
+      }
+      if(score>bestScore){bestScore=score;bestInRange=inRange}
     }
   }
-  return false;
+  return {score:bestScore,inRange:bestInRange};
+}
+
+/* Compat : true ssi le produit est exactement dans la fourchette recommandee.    */
+function matchesRecoSize(product,catKey,reco){
+  return recoCloseness(product,catKey,reco).inRange;
 }
 
 /* ============================================================ */
@@ -629,20 +648,37 @@ function renderCatalog(){
       }
       return;
     }
-    // Flag RECO + tri
-    list.forEach(function(p){p._reco=matchesRecoSize(p,cat.key,reco)});
+    // Score de proximite + filtrage : on garde seulement les produits >= seuil.
+    // Categories non dimensionnees (barre) : tout passe.
+    var THRESHOLD=cat.sized?(CFG.MATCH_THRESHOLD||0.75):0;
+    list.forEach(function(p){
+      var r=recoCloseness(p,cat.key,reco);
+      p._score=r.score;
+      p._reco=r.inRange;
+    });
+    var totalAvailable=list.length;
+    list=list.filter(function(p){return !cat.sized||p._score>=THRESHOLD});
     list.sort(function(a,b){
       if(a._reco!==b._reco)return a._reco?-1:1;
+      if(b._score!==a._score)return b._score-a._score;
       var pa=parseFloat((a.variants[0]||{}).price||0);
       var pb=parseFloat((b.variants[0]||{}).price||0);
       return pa-pb;
     });
+    if(!list.length){
+      html+='<div class="catgroup" data-cat="'+cat.key+'">'+
+        '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
+        '<span class="count">0 dans ta taille</span><span class="arrow">▶</span></h4>'+
+        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir toute la collection ('+totalAvailable+' produits) →</a></div></div>'+
+      '</div>';
+      return;
+    }
     anyShown=true;
     var recoCount=list.filter(function(p){return p._reco}).length;
     var openAttr=!firstOpened?' open':'';firstOpened=true;
     html+='<div class="catgroup'+openAttr+'" data-cat="'+cat.key+'">'+
       '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
-      '<span class="count">'+list.length+' en stock'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
+      '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
       '<span class="arrow">▶</span></h4>'+
       '<div class="items">'+list.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
     '</div>';
