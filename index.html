@@ -424,7 +424,7 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
       </div>
       <div class="descr" id="prodDescr"></div>
     </div>
-    <button class="add" id="prodAdd" type="button">AJOUTER À MON PANIER</button>
+    <button class="add" id="prodAdd" type="button">SÉLECTIONNER</button>
   </div>
 </div>
 
@@ -1342,7 +1342,8 @@ function refreshCart(){
   // Show bar si options OU current cart non-vide
   if(n===0 && !S.options.length){bar.classList.remove('show');return}
   bar.classList.add('show');
-  el('cartN').textContent=n?(n+' article'+(n>1?'s':'')+' en cours'):'Aucun article en cours';
+  var currentOptIdx=S.options.length+1;
+  el('cartN').textContent=n?('Option '+currentOptIdx+' en cours · '+n+' article'+(n>1?'s':'')):'Démarre une nouvelle option';
   el('cartT').textContent=total+' €';
   el('cartSave').style.display=n>0?'inline-flex':'none';
   el('cartGo').textContent=(n>0||S.options.length>0)?'VALIDER →':'AJOUTE DU MATOS';
@@ -1771,7 +1772,7 @@ function openProductModal(handle,fallback){
   el('prodDescr').innerHTML='<div class="spinner" style="margin:14px auto"></div>';
   el('prodVsel').style.display='none';
   el('prodAdd').classList.remove('added');
-  el('prodAdd').textContent='AJOUTER À MON PANIER';
+  el('prodAdd').textContent='SÉLECTIONNER';
   el('prodAdd').disabled=true;
   modalState={handle:handle,product:null,selectedVariantId:null,activeImg:0};
 
@@ -1872,7 +1873,7 @@ el('prodAdd').onclick=function(){
   if(row)row.classList.add('on');
   refreshCart();
   el('prodAdd').classList.add('added');
-  el('prodAdd').textContent='✓ AJOUTÉ';
+  el('prodAdd').textContent='✓ SÉLECTIONNÉ';
   setTimeout(closeProductModal,700);
 };
 
