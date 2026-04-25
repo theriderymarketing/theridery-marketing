@@ -504,7 +504,7 @@ var CATEGORY_MAP={
   ],
   kite:[
     {key:'kite',     titles:['ailes de kitesurf','ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', sized:true},
-    {key:'planche',  titles:['planches kitesurf','planches kite','twintips','twintip','twin tip','kiteboards'], unit:'cm', label:'Planches', sized:true},
+    {key:'planche',  titles:['twin tip planche de kitesurf','twin tip','twintip','planches kitesurf','planches kite','kiteboards','planche de kitesurf'], unit:'cm', label:'Planches', sized:true},
     {key:'barre',    titles:['barres de kite','barres kite','barres','control bars'], unit:null, label:'Barres', sized:false}
   ]
 };
@@ -517,7 +517,7 @@ var PACK_TARGETS={
 var PACK_HANDLES={wing:null,kite:null};
 var PACK_TITLES={wing:null,kite:null};
 
-function normStr(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()}
+function normStr(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[-_/]/g,' ').replace(/\s+/g,' ').trim()}
 
 /* Trouve la meilleure collection pour une liste de titres cibles.
    Strategie : on parcourt les targets en ordre de priorite. Pour chaque target on
