@@ -34,11 +34,10 @@ h2 em{color:#F97316;font-style:normal}
 
 /* Discipline picker */
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
-.pick button{background:#fff;border:2px solid #e5e7eb;border-radius:22px;padding:30px 18px;cursor:pointer;transition:all .2s;font-family:inherit;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.pick button{background:#fff;border:2px solid #e5e7eb;border-radius:22px;padding:36px 18px;cursor:pointer;transition:all .2s;font-family:inherit;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.04)}
 .pick button:hover{border-color:#F97316;transform:translateY(-3px);box-shadow:0 8px 28px rgba(249,115,22,.18)}
-.pick button .icon{font-size:2.4em;margin-bottom:8px;display:block}
-.pick button .name{font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:1.3em;color:#1a1a2e}
-.pick button .desc{font-size:.78em;color:#9ca3af;margin-top:6px;line-height:1.4}
+.pick button .name{font-family:'Staatliches',sans-serif;letter-spacing:2px;font-size:1.5em;color:#1a1a2e;display:block}
+.pick button .desc{font-size:.78em;color:#9ca3af;margin-top:8px;line-height:1.4;display:block}
 @media(max-width:520px){.pick{grid-template-columns:1fr}}
 
 /* Card */
@@ -85,29 +84,30 @@ h2 em{color:#F97316;font-style:normal}
 @media (max-width:420px){#catalog{grid-template-columns:1fr}}
 .catgroup{border:2px solid #e5e7eb;border-radius:16px;background:#fff;overflow:hidden;transition:border-color .2s;display:flex;flex-direction:column}
 .catgroup.open{border-color:#F97316}
-.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:1.5px;color:#1a1a2e;font-size:.95em;margin:0;padding:14px 14px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;background:#fff;transition:background .2s;text-align:center}
+.catgroup h4{font-family:'Staatliches',sans-serif;letter-spacing:1.5px;color:#1a1a2e;font-size:.95em;margin:0;padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;user-select:none;background:#fff;transition:background .2s;text-align:center}
 .catgroup h4:hover{background:#fff7ed}
 .catgroup.open h4{background:linear-gradient(180deg,#fff7ed,#fff)}
-.catgroup h4 .ico{font-size:1.6em}
-.catgroup h4 .lbl{flex:0 0 auto}
+.catgroup h4 .lbl{flex:0 0 auto;line-height:1.2}
 .catgroup h4 .count{font-family:'Montserrat',sans-serif;font-size:.7em;letter-spacing:0;color:#F97316;font-weight:700}
-.catgroup h4 .arrow{color:#F97316;font-weight:900;transition:transform .25s;display:inline-block}
-.catgroup.open h4 .arrow{transform:rotate(90deg)}
+.catgroup h4 .arrow{color:#F97316;font-weight:900;font-family:'Montserrat',sans-serif;font-size:1.2em;transition:transform .25s;display:inline-block;line-height:1}
+.catgroup.open h4 .arrow{transform:rotate(45deg)}
 .catgroup .items{max-height:0;overflow:hidden;transition:max-height .35s ease;padding:0 12px}
 .catgroup.open{grid-column:1/-1}
-.catgroup.open .items{max-height:20000px;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.prod{position:relative;display:flex;gap:14px;padding:12px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;align-items:center}
+.catgroup.open .items{max-height:20000px;padding:6px 14px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.prod{position:relative;display:flex;flex-direction:column;gap:8px;padding:10px;background:#fff;border:2px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all .2s}
 .prod:hover{border-color:#fed7aa}
 .prod.on{border-color:#F97316;background:#fff7ed}
-.prod .img{width:100px;height:100px;border-radius:12px;background:#f3f4f6 center/cover no-repeat;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.prod .meta{flex:1;min-width:0}
-.prod .title{font-weight:700;font-size:.88em;line-height:1.3;margin-bottom:4px}
-.prod .line{font-size:.72em;color:#9ca3af;display:flex;gap:8px;flex-wrap:wrap}
+.prod .img{width:100%;aspect-ratio:1/1;border-radius:10px;background:#f3f4f6 center/cover no-repeat;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.prod .meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.prod .title{font-weight:700;font-size:.85em;line-height:1.3;color:#1a1a2e;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.prod .line{font-size:.7em;color:#9ca3af;line-height:1.4;display:flex;flex-wrap:wrap;gap:4px 8px}
 .prod .line b{color:#1a1a2e;font-weight:700}
-.prod .price{font-family:'Staatliches',sans-serif;font-size:1.1em;letter-spacing:1px;color:#F97316;flex-shrink:0}
-.prod .check{width:24px;height:24px;border-radius:50%;border:2px solid #e5e7eb;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;font-size:.9em;color:#F97316;font-weight:900}
-.prod.on .check{background:#F97316;border-color:#F97316;color:#fff}
-.prod.reco{background:linear-gradient(90deg,#fff7ed 0%,#fff 60%);border-color:#fed7aa}
+.prod .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:6px}
+.prod .price{font-family:'Staatliches',sans-serif;font-size:1.25em;letter-spacing:1px;color:#F97316;line-height:1}
+.prod .check{position:relative;width:22px;height:22px;border-radius:50%;border:2px solid #e5e7eb;background:#fff;flex-shrink:0;transition:all .2s}
+.prod.on .check{background:#F97316;border-color:#F97316}
+.prod.on .check::after{content:'';position:absolute;left:5px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.prod.reco{background:linear-gradient(180deg,#fff7ed 0%,#fff 50%);border-color:#fed7aa}
 .reco-badge{position:absolute;top:-8px;left:10px;background:#F97316;color:#fff;font-family:'Staatliches',sans-serif;letter-spacing:1.5px;font-size:.7em;padding:3px 8px;border-radius:5px;box-shadow:0 2px 6px rgba(249,115,22,.3);z-index:2}
 .empty{padding:14px;text-align:center;color:#9ca3af;font-size:.85em;background:#f8f9fa;border-radius:10px}
 
@@ -157,12 +157,10 @@ h2 em{color:#F97316;font-style:normal}
     <p class="subtitle">Choisis ta discipline. On te propose un setup adapté à ton profil + le matos dispo en stock.</p>
     <div class="pick">
       <button data-d="wing">
-        <span class="icon">🪂</span>
         <span class="name">WINGFOIL</span>
         <span class="desc">Aile, planche, foil, accessoires</span>
       </button>
       <button data-d="kite">
-        <span class="icon">🪁</span>
         <span class="name">KITESURF</span>
         <span class="desc">Kite, barre, planche, harnais</span>
       </button>
@@ -340,15 +338,15 @@ function bucketPoids(p){return p<65?'l':p<95?'m':'h'}
 
 var CATEGORY_MAP={
   wing:[
-    {key:'aile',     titles:['ailes de wingfoil','ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing',          icon:'🪂', sized:true},
-    {key:'planche_r',titles:['planches rigides wingfoil','planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides',       icon:'🛹', sized:true},
-    {key:'planche_g',titles:['planches gonflables wingfoil','planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', icon:'💨', sized:true},
-    {key:'foil',     titles:['foil complet wing','foil complet','foils wing','foil wing','foil','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts',         icon:'🐟', sized:true}
+    {key:'aile',     titles:['ailes de wingfoil','ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing', sized:true},
+    {key:'planche_r',titles:['planches rigides wingfoil','planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides', sized:true},
+    {key:'planche_g',titles:['planches gonflables wingfoil','planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', sized:true},
+    {key:'foil',     titles:['foil complet wing','foil complet','foils wing','foil wing','foil','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts', sized:true}
   ],
   kite:[
-    {key:'kite',     titles:['ailes de kitesurf','ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', icon:'🪁', sized:true},
-    {key:'planche',  titles:['planches kitesurf','planches kite','twintips','twintip','twin tip','kiteboards'], unit:'cm', label:'Planches',  icon:'🛹', sized:true},
-    {key:'barre',    titles:['barres de kite','barres kite','barres','control bars'], unit:null, label:'Barres',    icon:'🎚️', sized:false}
+    {key:'kite',     titles:['ailes de kitesurf','ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', sized:true},
+    {key:'planche',  titles:['planches kitesurf','planches kite','twintips','twintip','twin tip','kiteboards'], unit:'cm', label:'Planches', sized:true},
+    {key:'barre',    titles:['barres de kite','barres kite','barres','control bars'], unit:null, label:'Barres', sized:false}
   ]
 };
 
@@ -637,13 +635,15 @@ function productCard(p,recoFlag){
     (img?'<div class="img" style="background-image:url('+img+')"></div>':'<div class="img"></div>')+
     '<div class="meta">'+
       '<div class="title">'+escapeHtml(p.title)+'</div>'+
-      '<div class="line">'+
+      ((vendor||variantTitle)?'<div class="line">'+
         (vendor?'<b>'+escapeHtml(vendor)+'</b>':'')+
         (variantTitle?'<span>'+escapeHtml(variantTitle)+'</span>':'')+
-      '</div>'+
+      '</div>':'')+
     '</div>'+
-    '<div class="price">'+price+'€</div>'+
-    '<div class="check">✓</div>'+
+    '<div class="row">'+
+      '<div class="price">'+price+'€</div>'+
+      '<div class="check"></div>'+
+    '</div>'+
   '</div>';
 }
 
@@ -656,7 +656,7 @@ function renderCatalog(){
   var anyShown=false;
 
   if(S.loadStatus==='error'){
-    el('stockWarn').innerHTML='<div class="warn">⚠️ Impossible de joindre le shop en direct. Vérifie la dispo sur <a href="'+CFG.STORE+'" target="_blank">theridery.com</a> avant d\'envoyer le devis.</div>';
+    el('stockWarn').innerHTML='<div class="warn">Impossible de joindre le shop en direct. Vérifie la dispo sur <a href="'+CFG.STORE+'" target="_blank">theridery.com</a> avant d\'envoyer le devis.</div>';
   } else {
     el('stockWarn').innerHTML='';
   }
@@ -667,9 +667,9 @@ function renderCatalog(){
       // Pas de collection resolue ou vide — on affiche quand meme un header + lien
       if(cat.handle){
         html+='<div class="catgroup" data-cat="'+cat.key+'">'+
-          '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
-          '<span class="count">0 en stock</span><span class="arrow">▶</span></h4>'+
-          '<div class="items"><div class="empty">Rien en stock sur cette catégorie pour le moment. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir la collection →</a></div></div>'+
+          '<h4><span class="lbl">'+cat.label+'</span>'+
+          '<span class="count">0 en stock</span><span class="arrow">+</span></h4>'+
+          '<div class="items"><div class="empty">Rien en stock sur cette catégorie pour le moment. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir la collection</a></div></div>'+
         '</div>';
       }
       return;
@@ -694,18 +694,18 @@ function renderCatalog(){
     if(!list.length){
       anyShown=true;
       html+='<div class="catgroup" data-cat="'+cat.key+'">'+
-        '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
-        '<span class="count">0 dans ta taille</span><span class="arrow">▶</span></h4>'+
-        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir toute la collection ('+totalAvailable+' produits) →</a></div></div>'+
+        '<h4><span class="lbl">'+cat.label+'</span>'+
+        '<span class="count">0 dans ta taille</span><span class="arrow">+</span></h4>'+
+        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#F97316">Voir toute la collection ('+totalAvailable+' produits)</a></div></div>'+
       '</div>';
       return;
     }
     anyShown=true;
     var recoCount=list.filter(function(p){return p._reco}).length;
     html+='<div class="catgroup" data-cat="'+cat.key+'">'+
-      '<h4><span class="ico">'+cat.icon+'</span><span class="lbl">'+cat.label+'</span>'+
+      '<h4><span class="lbl">'+cat.label+'</span>'+
       '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
-      '<span class="arrow">▶</span></h4>'+
+      '<span class="arrow">+</span></h4>'+
       '<div class="items">'+list.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
     '</div>';
   });
@@ -791,7 +791,7 @@ function buildEmailBody(){
   lines.push('TOTAL : '+total+'€');
   lines.push('');
   if(url){
-    lines.push('👉 OUVRE TON PANIER SUR LE SITE :');
+    lines.push('OUVRE TON PANIER SUR LE SITE :');
     lines.push(url);
     lines.push('');
   }
