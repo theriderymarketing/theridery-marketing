@@ -538,10 +538,25 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 <div class="cart" id="cart">
   <div class="cartopts" id="cartOpts"></div>
   <div class="row">
-    <div>
-      <span class="n" id="cartN">0 articles</span>
-      <div class="t" id="cartT">0 €</div>
-      <span class="over" id="cartOver" style="display:none"></span>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div>
+        <span class="n" id="cartN">0 articles</span>
+        <div class="t" id="cartT">0 €</div>
+        <span class="over" id="cartOver" style="display:none"></span>
+      </div>
+      
+      <div class="cart-discount-section" style="display:flex; flex-direction:column; gap:2px; border-left:1px solid rgba(255,255,255,0.2); padding-left:12px;">
+        <span class="n" style="font-size:0.65em; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1.5px; font-weight:800; display:block;">Remise</span>
+        <select id="cart-discount" style="font-family:inherit; font-size:0.75em; font-weight:700; background:transparent; color:#fff; border:1.5px dashed rgba(255,255,255,0.4); border-radius:4px; padding:2px 4px; cursor:pointer; outline:none; transition:all 0.2s;">
+          <option value="0" style="color:#000">Aucune</option>
+          <option value="5" style="color:#000">-5%</option>
+          <option value="10" style="color:#000">-10%</option>
+          <option value="15" style="color:#000">-15%</option>
+          <option value="20" style="color:#000">-20%</option>
+          <option value="custom" style="color:#000">Code promo...</option>
+        </select>
+        <input type="text" id="cart-discount-code" placeholder="Code..." style="display:none; font-family:inherit; font-size:0.7em; width:80px; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.15); color:#fff; font-weight:600; text-transform:uppercase;" />
+      </div>
     </div>
     <button class="save" id="cartSave" type="button">+ OPTION</button>
     <button id="cartGo" type="button">VALIDER →</button>
@@ -593,7 +608,14 @@ var CFG={
   // Seuil de correspondance taille. Score = ratio variant_size / target_center.
   // Score 1.0 = pile dans le range. 0.5 = ~25% d'ecart relatif au centre.
   // Defaut 0.5 = on garde tout ce qui est dans +/-25% (ex: 5-5.5m² => 4.1m² a 6.4m² OK).
-  MATCH_THRESHOLD:0.5
+  MATCH_THRESHOLD:0.5,
+  // Codes de réduction par défaut appliqués sur Shopify
+  DISCOUNT_CODES:{
+    '5':'RIDERY5',
+    '10':'RIDERY10',
+    '15':'RIDERY15',
+    '20':'RIDERY20'
+  }
 };
 
 /* ============================================================ */
@@ -1566,26 +1588,46 @@ function refreshCart(){
   var n=ids.length;
   var total=ids.reduce(function(s,k){return s+S.selected[k].price},0);
   var bar=el('cart');
+  
+  var pct = getActiveDiscountPercent();
+  
   // Render strip des options sauvegardees
   var opts=el('cartOpts');
   opts.innerHTML=S.options.map(function(o){
     var nb=Object.keys(o.items).length;
     var t=optionTotal(o);
-    return '<span class="opt" data-id="'+o.id+'"><b>'+escapeHtml(o.name)+'</b>'+nb+' art · '+t+'€<button class="x" data-rem="'+o.id+'" type="button">×</button></span>';
+    var tText = t + '€';
+    if (pct > 0) {
+      var dt = Math.round(t * (1 - pct / 100));
+      tText = dt + '€ <s style="opacity:0.65;font-size:0.95em;margin-left:4px;">' + t + '€</s>';
+    }
+    return '<span class="opt" data-id="'+o.id+'"><b>'+escapeHtml(o.name)+'</b>'+nb+' art · '+tText+'<button class="x" data-rem="'+o.id+'" type="button">×</button></span>';
   }).join('');
+  
   // Show bar si options OU current cart non-vide
   if(n===0 && !S.options.length){bar.classList.remove('show');return}
   bar.classList.add('show');
+  
   var currentOptIdx=S.options.length+1;
   el('cartN').textContent=n?('Option '+currentOptIdx+' en cours · '+n+' article'+(n>1?'s':'')):'Démarre une nouvelle option';
-  el('cartT').textContent=total+' €';
+  
+  // Display total (remisé ou non)
+  if (pct > 0) {
+    var discountedTotal = Math.round(total * (1 - pct / 100));
+    el('cartT').innerHTML = discountedTotal + ' € <s style="font-size:0.6em; opacity:0.75; font-family:\'Montserrat\',sans-serif; margin-left:6px; font-weight:normal;">' + total + ' €</s>';
+  } else {
+    el('cartT').textContent = total + ' €';
+  }
+  
   el('cartSave').style.display=n>0?'inline-flex':'none';
   el('cartGo').textContent=(n>0||S.options.length>0)?'VALIDER →':'AJOUTE DU MATOS';
   el('cartGo').disabled=(n===0 && !S.options.length);
+  
   var over=el('cartOver');
-  if(S.profile.budget && total>S.profile.budget){
+  var compareTotal = pct > 0 ? Math.round(total * (1 - pct / 100)) : total;
+  if(S.profile.budget && compareTotal>S.profile.budget){
     over.style.display='block';
-    over.textContent='Option en cours au-dessus du budget de '+(total-S.profile.budget)+'€';
+    over.textContent='Option en cours au-dessus du budget de '+(compareTotal-S.profile.budget)+'€';
   } else {
     over.style.display='none';
   }
@@ -1615,6 +1657,12 @@ function buildCartUrl(items){
   if (vendeur) {
     params.push('attributes[Vendeur]=' + encodeURIComponent(vendeur));
   }
+
+  // Appliquer le code de réduction Shopify si présent
+  var dCode = getActiveDiscountCode();
+  if (dCode) {
+    params.push('discount=' + encodeURIComponent(dCode));
+  }
   
   return url + '?' + params.join('&');
 }
@@ -1643,7 +1691,19 @@ function buildEmailBody(){
     lines.push('- '+it.title+' — '+it.price+'€');
   });
   lines.push('');
-  lines.push('TOTAL : '+total+'€');
+  var pct = getActiveDiscountPercent();
+  var dCode = getActiveDiscountCode();
+  if (pct > 0) {
+    var dt = Math.round(total * (1 - pct / 100));
+    lines.push('TOTAL PUBLIC : '+total+'€');
+    lines.push('REMISE : -'+pct+'% '+(dCode ? '(Code: '+dCode+')' : ''));
+    lines.push('TOTAL REMISÉ : '+dt+'€');
+  } else if (dCode) {
+    lines.push('TOTAL : '+total+'€');
+    lines.push('CODE DE RÉDUCTION : '+dCode);
+  } else {
+    lines.push('TOTAL : '+total+'€');
+  }
   lines.push('');
   if(url){
     lines.push('OUVRE TON PANIER SUR LE SITE :');
@@ -1768,6 +1828,15 @@ function buildOptionsHtml(allOptions){
     var defaultName='Option '+(idx+1);
     // N'affiche le nom personnalise que s'il n'est pas le defaut
     var customName=(o.name && o.name!==defaultName && o.name!=='Option '+(o.id||''))?o.name:'';
+    
+    var pct = getActiveDiscountPercent();
+    var dCode = getActiveDiscountCode();
+    var totalText = total + '€';
+    if (pct > 0) {
+      var dt = Math.round(total * (1 - pct / 100));
+      totalText = dt + '€ <span style="font-size:0.7em;text-decoration:line-through;opacity:0.8;font-family:Arial,Helvetica,sans-serif;font-weight:normal;margin-left:6px;">' + total + '€</span>';
+    }
+
     var rows='';
     keys.forEach(function(k,i){
       var it=o.items[k];
@@ -1781,13 +1850,15 @@ function buildOptionsHtml(allOptions){
       '</tr></table>';
       if(i<keys.length-1)rows+='<div style="height:1px;background:#eef0f4;font-size:0;line-height:0;margin:0;">&nbsp;</div>';
     });
+
     var html='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px 0;background:#ffffff;border:2px solid #c5f3ed;border-radius:14px;overflow:hidden;">'+
       '<tr><td style="background:linear-gradient(135deg,#22d8c8 0%,#0d9d92 100%);padding:14px 18px;">'+
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>'+
           '<td valign="middle" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:14px;color:#ecfeff;letter-spacing:2px;text-transform:uppercase;font-weight:400;">Option '+(idx+1)+' · '+nb+' article'+(nb>1?'s':'')+'</td>'+
-          '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:22px;color:#ffffff;letter-spacing:1.5px;line-height:1;">'+total+'€</td>'+
+          '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:22px;color:#ffffff;letter-spacing:1.5px;line-height:1;">'+totalText+'</td>'+
         '</tr></table>'+
         (customName?'<p style="margin:6px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#ffffff;font-weight:700;line-height:1.2;">'+escapeHtml(customName)+'</p>':'')+
+        (pct > 0 ? '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Remise de -'+pct+'% appliquée'+(dCode?' ('+escapeHtml(dCode)+')':'')+'</p>' : (dCode ? '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Code promo : '+escapeHtml(dCode)+'</p>' : ''))+
       '</td></tr>'+
       '<tr><td style="padding:6px 18px 14px 18px;">'+rows+'</td></tr>'+
       '<tr><td align="center" style="padding:0 18px 18px 18px;">'+
@@ -1824,10 +1895,15 @@ function sendDevis(){
     alert('Ajoute au moins un article avant d\'envoyer le devis.');return;
   }
 
+  var pct = getActiveDiscountPercent();
   var allOptions=S.options;
   var firstUrl=optionUrl(allOptions[0])||CFG.STORE;
   var totalAll=allOptions.reduce(function(s,o){return s+optionTotal(o)},0);
   var totalFirst=optionTotal(allOptions[0]);
+  if (pct > 0) {
+    totalAll = Math.round(totalAll * (1 - pct / 100));
+    totalFirst = Math.round(totalFirst * (1 - pct / 100));
+  }
   var nbItemsAll=allOptions.reduce(function(s,o){return s+Object.keys(o.items).length},0);
   var url=firstUrl;
   var total=totalFirst;
@@ -1884,6 +1960,14 @@ function sendDevis(){
     telephone:tel||null,
     source:'theriderymarketing.github.io'
   };
+
+  var dCode = getActiveDiscountCode();
+  if (pct > 0 || dCode) {
+    profile.properties.remise_pourcentage = pct;
+    profile.properties.code_reduction = dCode || null;
+    properties.remise_pourcentage = pct;
+    properties.code_reduction = dCode || null;
+  }
 
   var vendeur = localStorage.getItem('ridery_vendeur');
   if (vendeur) {
@@ -2304,12 +2388,103 @@ function initVendeur() {
   updateSelection();
 }
 
+/* Récupère le pourcentage de remise sélectionné */
+function getActiveDiscountPercent() {
+  var select = el('cart-discount');
+  if (!select) return 0;
+  var val = select.value;
+  if (val && val !== 'custom') {
+    return parseInt(val, 10) || 0;
+  }
+  return 0;
+}
+
+/* Récupère le code de réduction correspondant (Shopify) ou custom */
+function getActiveDiscountCode() {
+  var select = el('cart-discount');
+  if (!select) return '';
+  var val = select.value;
+  if (val === 'custom') {
+    var codeInput = el('cart-discount-code');
+    return codeInput ? codeInput.value.trim().toUpperCase() : '';
+  }
+  if (val && val !== '0') {
+    return (CFG.DISCOUNT_CODES && CFG.DISCOUNT_CODES[val]) || '';
+  }
+  return '';
+}
+
+/* Initialise la gestion de la remise */
+function initDiscount() {
+  var select = el('cart-discount');
+  var codeInput = el('cart-discount-code');
+  if (!select || !codeInput) return;
+
+  // Charger les valeurs depuis localStorage ou URL
+  var urlParams = new URLSearchParams(window.location.search);
+  var urlDiscount = urlParams.get('discount') || urlParams.get('code');
+  
+  if (urlDiscount) {
+    urlDiscount = decodeURIComponent(urlDiscount).trim().toUpperCase();
+    // Vérifier si c'est un de nos pourcentages prédéfinis
+    var matchedPct = null;
+    if (CFG.DISCOUNT_CODES) {
+      Object.keys(CFG.DISCOUNT_CODES).forEach(function(k) {
+        if (CFG.DISCOUNT_CODES[k].toUpperCase() === urlDiscount.toUpperCase()) {
+          matchedPct = k;
+        }
+      });
+    }
+    
+    if (matchedPct) {
+      select.value = matchedPct;
+      localStorage.setItem('ridery_discount_type', matchedPct);
+    } else {
+      select.value = 'custom';
+      codeInput.value = urlDiscount;
+      codeInput.style.display = 'block';
+      localStorage.setItem('ridery_discount_type', 'custom');
+      localStorage.setItem('ridery_discount_code', urlDiscount);
+    }
+  } else {
+    var savedType = localStorage.getItem('ridery_discount_type') || '0';
+    var savedCode = localStorage.getItem('ridery_discount_code') || '';
+    select.value = savedType;
+    if (savedType === 'custom') {
+      codeInput.value = savedCode;
+      codeInput.style.display = 'block';
+    }
+  }
+
+  // Écouter les changements
+  select.onchange = function() {
+    var val = select.value;
+    if (val === 'custom') {
+      codeInput.style.display = 'block';
+      codeInput.value = '';
+      codeInput.focus();
+      localStorage.setItem('ridery_discount_type', 'custom');
+      localStorage.setItem('ridery_discount_code', '');
+    } else {
+      codeInput.style.display = 'none';
+      localStorage.setItem('ridery_discount_type', val);
+    }
+    refreshCart();
+  };
+
+  codeInput.oninput = function() {
+    localStorage.setItem('ridery_discount_code', codeInput.value.trim().toUpperCase());
+    refreshCart();
+  };
+}
+
 /* ============================================================ */
 /*  BOOT                                                         */
 /* ============================================================ */
 fetchCollections().then(function(){
   el('loading').classList.add('hide');
   initVendeur();
+  initDiscount();
 });
 
 })();
