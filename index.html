@@ -1220,7 +1220,7 @@ function renderRecoChips(reco){
 }
 
 function productCard(p,recoFlag){
-  var v=p._matchedVariant || (p.variants||[]).find(function(x){return x.available})||p.variants[0];
+  var v=p._displayVariant || p._matchedVariant || (p.variants||[]).find(function(x){return x.available})||p.variants[0];
   var img=(p.images&&p.images[0]&&p.images[0].src)||'';
   var vendor=p.vendor||'';
   var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
@@ -1458,9 +1458,13 @@ function getProductSize(p,catKey){
 /* Trie une liste : taille ASC primaire, prix selon dir ('asc'|'desc') secondaire. */
 function sortProducts(list,priceDir){
   return list.slice().sort(function(a,b){
-    if(a._size!==b._size)return a._size-b._size;
-    var pa=parseFloat((a.variants[0]||{}).price||0);
-    var pb=parseFloat((b.variants[0]||{}).price||0);
+    var sa = a._filterSize !== undefined ? a._filterSize : a._size;
+    var sb = b._filterSize !== undefined ? b._filterSize : b._size;
+    if(sa!==sb)return sa-sb;
+    var va = a._displayVariant || (a.variants||[])[0] || {};
+    var vb = b._displayVariant || (b.variants||[])[0] || {};
+    var pa=parseFloat(va.price||0);
+    var pb=parseFloat(vb.price||0);
     return priceDir==='desc'?pb-pa:pa-pb;
   });
 }
@@ -1473,10 +1477,45 @@ function renderCatItems(cat){
   var list=cat._all.filter(function(p){
     var passReco = st.recoOnly?p._reco:true;
     if(!passReco) return false;
-    if(p._size !== 9999) {
-      if(st.minSize !== undefined && st.minSize !== null && p._size < st.minSize) return false;
-      if(st.maxSize !== undefined && st.maxSize !== null && p._size > st.maxSize) return false;
+    
+    var hasSizeFilter = (st.minSize !== undefined && st.minSize !== null) || (st.maxSize !== undefined && st.maxSize !== null);
+    if(!hasSizeFilter) {
+      p._displayVariant = null;
+      p._filterSize = p._size;
+      return true;
     }
+    
+    var validVariants = [];
+    var vs = p.variants || [];
+    for(var i=0; i<vs.length; i++){
+      if (!vs[i].available) continue;
+      var ps = parseSizeForCategory(vs[i].title, p.title, cat.key) || parseSizeForCategory(vs[i].option1, p.title, cat.key);
+      if (ps) {
+        var sizeVal = ps.value;
+        var ok = true;
+        if (st.minSize !== undefined && st.minSize !== null && sizeVal < st.minSize) ok = false;
+        if (st.maxSize !== undefined && st.maxSize !== null && sizeVal > st.maxSize) ok = false;
+        if (ok) validVariants.push({v: vs[i], size: sizeVal});
+      }
+    }
+    
+    if (validVariants.length === 0) {
+      var pt = parseSizeForCategory(p.title, p.title, cat.key);
+      if (pt) {
+        var ok = true;
+        if (st.minSize !== undefined && st.minSize !== null && pt.value < st.minSize) ok = false;
+        if (st.maxSize !== undefined && st.maxSize !== null && pt.value > st.maxSize) ok = false;
+        if (ok) {
+           p._displayVariant = null;
+           p._filterSize = pt.value;
+           return true;
+        }
+      }
+      return false;
+    }
+    
+    p._displayVariant = validVariants[0].v;
+    p._filterSize = validVariants[0].size;
     return true;
   });
   list=sortProducts(list,st.priceDir);
