@@ -1470,7 +1470,15 @@ function renderCatItems(cat){
   var box=document.querySelector('.catgroup[data-cat="'+cat.key+'"] .items');
   if(!box||!cat._all)return;
   var st=cat._state||{recoOnly:true,priceDir:'asc'};
-  var list=cat._all.filter(function(p){return st.recoOnly?p._reco:true});
+  var list=cat._all.filter(function(p){
+    var passReco = st.recoOnly?p._reco:true;
+    if(!passReco) return false;
+    if(p._size !== 9999) {
+      if(st.minSize !== undefined && st.minSize !== null && p._size < st.minSize) return false;
+      if(st.maxSize !== undefined && st.maxSize !== null && p._size > st.maxSize) return false;
+    }
+    return true;
+  });
   list=sortProducts(list,st.priceDir);
   if(!list.length){
     box.innerHTML='<div class="empty" style="grid-column:1/-1">Aucun produit pour ce filtre.'+(cat.handle?' <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#22d8c8">Voir toute la collection</a>':'')+'</div>';
@@ -1540,6 +1548,12 @@ function renderCatalog(){
           '<button class="on" data-v="reco">Reco</button>'+
           '<button data-v="all">Tous</button>'+
         '</div>'+
+        '<span class="lbl" style="margin-left:12px">Taille</span>'+
+        '<div class="grp" data-grp="size-range" style="display:flex; align-items:center; gap:4px; margin-left:4px; border:none; padding:0; background:none; box-shadow:none;">'+
+          '<input type="number" class="size-min" placeholder="Min" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
+          '<span style="font-size:12px;color:#6b7280;text-transform:none;">à</span>'+
+          '<input type="number" class="size-max" placeholder="Max" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
+        '</div>'+
         '<span class="lbl" style="margin-left:auto">Prix (à taille égale)</span>'+
         '<div class="grp" data-grp="price">'+
           '<button class="on" data-v="asc">↑ - cher</button>'+
@@ -1555,6 +1569,26 @@ function renderCatalog(){
   }
 
   el('catalog').innerHTML=html;
+
+  // Real-time size filter
+  el('catalog').oninput = function(e) {
+    if (e.target.classList.contains('size-min') || e.target.classList.contains('size-max')) {
+      var catgroup = e.target.closest('.catgroup');
+      if (!catgroup) return;
+      var catKey = catgroup.getAttribute('data-cat');
+      var catObj = (CATEGORY_MAP[S.discipline]||[]).find(function(c){return c.key===catKey});
+      if(!catObj) return;
+      
+      var minVal = parseFloat(catgroup.querySelector('.size-min').value);
+      var maxVal = parseFloat(catgroup.querySelector('.size-max').value);
+      
+      catObj._state = catObj._state || {recoOnly:true, priceDir:'asc'};
+      catObj._state.minSize = isNaN(minVal) ? null : minVal;
+      catObj._state.maxSize = isNaN(maxVal) ? null : maxVal;
+      
+      renderCatItems(catObj);
+    }
+  };
 
   // Delegation click : toolbar > h4 toggle > .prod modale
   el('catalog').onclick=function(e){
