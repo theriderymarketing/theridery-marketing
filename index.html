@@ -266,6 +266,36 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
 /* Footer */
 .foot{text-align:center;margin-top:40px;font-family:'Staatliches',sans-serif;letter-spacing:2.5px;color:var(--muted-2);font-size:.85em;padding-top:24px;border-top:1px solid var(--line)}
+
+/* Vendeur selector styling */
+.vendeur-select {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1.5px dashed var(--muted-2);
+  padding: 6px 28px 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.vendeur-select:hover {
+  background-color: var(--bg-2);
+  border-color: var(--orange);
+}
+.vendeur-select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px var(--orange-l);
+}
 </style>
 </head>
 <body>
@@ -279,7 +309,16 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
   <div class="brandbar">
     <div class="logo">KEEP RIDING <b>The Ridery</b></div>
-    <div class="tag">Simulateur Devis</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <select id="vendeur-select" class="vendeur-select">
+        <option value="">👤 Aucun vendeur</option>
+        <option value="Jean">👤 Jean</option>
+        <option value="Kevin">👤 Kevin</option>
+        <option value="Arthur">👤 Arthur</option>
+        <option value="custom">👤 + Autre...</option>
+      </select>
+      <div class="tag">Simulateur Devis</div>
+    </div>
   </div>
 
   <div class="progress"><i id="bar" style="width:20%"></i></div>
@@ -1465,9 +1504,8 @@ function buildCartUrl(items){
   // Attribut de panier Shopify (apparaît sur la commande finale dans Shopify)
   params.push('attributes[Source]=Simulateur%20Devis');
   
-  // Récupérer dynamiquement le vendeur ou la boutique depuis l'URL de la page (ex: ?vendeur=Jean ou ?v=Jean)
-  var urlParams = new URLSearchParams(window.location.search);
-  var vendeur = urlParams.get('vendeur') || urlParams.get('v');
+  // Récupérer le vendeur depuis localStorage
+  var vendeur = localStorage.getItem('ridery_vendeur');
   if (vendeur) {
     params.push('attributes[Vendeur]=' + encodeURIComponent(vendeur));
   }
@@ -1741,6 +1779,12 @@ function sendDevis(){
     source:'theriderymarketing.github.io'
   };
 
+  var vendeur = localStorage.getItem('ridery_vendeur');
+  if (vendeur) {
+    profile.properties.vendeur = vendeur;
+    properties.vendeur = vendeur;
+  }
+
   // UI : ecran de confirmation immediat (pas d'attente Klaviyo bloquante)
   el('openCart').href=url;
   el('doneMsg').innerHTML='On t\'envoie le panier par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
@@ -1992,11 +2036,81 @@ el('prodAdd').onclick=function(){
   setTimeout(closeProductModal,700);
 };
 
+/* Initialisation et gestion du vendeur */
+function initVendeur() {
+  var select = el('vendeur-select');
+  if (!select) return;
+
+  // 1. Lire depuis URL params puis localStorage
+  var urlParams = new URLSearchParams(window.location.search);
+  var vName = urlParams.get('vendeur') || urlParams.get('v');
+  if (vName) {
+    vName = decodeURIComponent(vName).trim();
+    localStorage.setItem('ridery_vendeur', vName);
+  } else {
+    vName = localStorage.getItem('ridery_vendeur') || '';
+  }
+
+  // 2. Si le vendeur n'est pas dans la liste pré-remplie, l'ajouter
+  if (vName) {
+    var exists = false;
+    for (var i = 0; i < select.options.length; i++) {
+      if (select.options[i].value.toLowerCase() === vName.toLowerCase()) {
+        select.selectedIndex = i;
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      // Ajouter une nouvelle option pour ce vendeur personnalisé
+      var opt = document.createElement('option');
+      opt.value = vName;
+      opt.textContent = '👤 ' + vName;
+      // Insérer avant l'option "custom" (+ Autre...)
+      select.insertBefore(opt, select.options[select.options.length - 1]);
+      select.value = vName;
+    }
+  } else {
+    select.value = '';
+  }
+
+  // 3. Écouter les changements du menu déroulant
+  var lastValue = select.value;
+  select.onchange = function() {
+    var val = select.value;
+    if (val === 'custom') {
+      var customName = prompt('Entrez le nom du nouveau vendeur :');
+      if (customName) {
+        customName = customName.trim();
+        if (customName) {
+          // Créer l'option
+          var opt = document.createElement('option');
+          opt.value = customName;
+          opt.textContent = '👤 ' + customName;
+          select.insertBefore(opt, select.options[select.options.length - 1]);
+          select.value = customName;
+          localStorage.setItem('ridery_vendeur', customName);
+          lastValue = customName;
+          refreshCart(); // Rafraîchit le bouton de commande immédiat si présent
+          return;
+        }
+      }
+      // Si annulé ou vide, on remet la valeur précédente
+      select.value = lastValue;
+    } else {
+      localStorage.setItem('ridery_vendeur', val);
+      lastValue = val;
+      refreshCart(); // Rafraîchit le bouton de commande immédiat si présent
+    }
+  };
+}
+
 /* ============================================================ */
 /*  BOOT                                                         */
 /* ============================================================ */
 fetchCollections().then(function(){
   el('loading').classList.add('hide');
+  initVendeur();
 });
 
 })();
