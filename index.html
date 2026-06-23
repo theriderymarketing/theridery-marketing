@@ -1961,7 +1961,7 @@ function buildOptionsHtml(allOptions){
     var keys=Object.keys(o.items);
     var nb=keys.length;
     var total=optionTotal(o);
-    var url=optionUrl(o);
+    var url = (idx === 0 && window._overrideInvoiceUrl) ? window._overrideInvoiceUrl : optionUrl(o);
     var defaultName='Option '+(idx+1);
     // N'affiche le nom personnalise que s'il n'est pas le defaut
     var customName=(o.name && o.name!==defaultName && o.name!=='Option '+(o.id||''))?o.name:'';
@@ -2165,6 +2165,12 @@ function sendDevis(){
       properties.cart_url = data.url;
       properties.invoice_url = data.url;
       profile.properties.derniere_simu_url = data.url;
+      
+      // Update the HTML blocks so the buttons inside the email point to the invoice
+      window._overrideInvoiceUrl = data.url;
+      properties.options_html = buildOptionsHtml(allOptions);
+      properties.items_html = properties.options_html;
+      window._overrideInvoiceUrl = null;
     } else {
       throw new Error(data.error || 'API renvoie une erreur');
     }
