@@ -267,9 +267,14 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 /* Footer */
 .foot{text-align:center;margin-top:40px;font-family:'Staatliches',sans-serif;letter-spacing:2.5px;color:var(--muted-2);font-size:.85em;padding-top:24px;border-top:1px solid var(--line)}
 
-/* Vendeur selector styling */
-.vendeur-select {
+/* Custom Vendeur Dropdown */
+.vendeur-dropdown {
+  position: relative;
+  display: inline-block;
   font-family: 'Montserrat', sans-serif;
+}
+.vendeur-btn {
+  font-family: inherit;
   font-size: 0.72em;
   font-weight: 700;
   color: var(--ink);
@@ -284,17 +289,90 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 10px;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   appearance: none;
   -webkit-appearance: none;
-  -moz-appearance: none;
 }
-.vendeur-select:hover {
+.vendeur-btn:hover {
   background-color: var(--bg-2);
   border-color: var(--orange);
 }
-.vendeur-select:focus {
+.vendeur-btn.active {
   border-color: var(--orange);
-  box-shadow: 0 0 0 2px var(--orange-l);
+  background-color: var(--bg-2);
+}
+.vendeur-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 30px rgba(11,17,32,0.15);
+  z-index: 100;
+  min-width: 220px;
+  padding: 8px 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.vendeur-menu.show {
+  display: block;
+  animation: fadeIn 0.15s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.vendeur-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.vendeur-option:hover {
+  background: var(--bg-2);
+}
+.vendeur-option input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--orange);
+}
+.vendeur-option label {
+  cursor: pointer;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--ink-2);
+  user-select: none;
+  margin: 0;
+  flex: 1;
+}
+.vendeur-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 0;
+}
+.vendeur-add-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--orange-d);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.vendeur-add-btn:hover {
+  background: var(--orange-soft);
 }
 </style>
 </head>
@@ -310,13 +388,41 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
   <div class="brandbar">
     <div class="logo">KEEP RIDING <b>The Ridery</b></div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <select id="vendeur-select" class="vendeur-select">
-        <option value="">👤 Aucun vendeur</option>
-        <option value="Jean">👤 Jean</option>
-        <option value="Kevin">👤 Kevin</option>
-        <option value="Arthur">👤 Arthur</option>
-        <option value="custom">👤 + Autre...</option>
-      </select>
+      <div class="vendeur-dropdown">
+        <button id="vendeur-btn" class="vendeur-btn">👤 Aucun vendeur</button>
+        <div id="vendeur-menu" class="vendeur-menu">
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-adrien" value="Adrien Caruso">
+            <label for="v-adrien">Adrien Caruso</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-axel" value="Axel De Jessé">
+            <label for="v-axel">Axel De Jessé</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-marseille" value="Boutique Marseille">
+            <label for="v-marseille">Boutique Marseille</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-emeric" value="Emeric Raussou">
+            <label for="v-emeric">Emeric Raussou</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-jean-tr" value="Jean The Ridery">
+            <label for="v-jean-tr">Jean The Ridery</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-jean-z" value="Jean Zante">
+            <label for="v-jean-z">Jean Zante</label>
+          </div>
+          <div class="vendeur-option">
+            <input type="checkbox" id="v-lucas" value="LUCAS JACQUIER">
+            <label for="v-lucas">LUCAS JACQUIER</label>
+          </div>
+          <div class="vendeur-divider"></div>
+          <button id="vendeur-add-btn" class="vendeur-add-btn">+ Autre vendeur...</button>
+        </div>
+      </div>
       <div class="tag">Simulateur Devis</div>
     </div>
   </div>
@@ -2036,12 +2142,113 @@ el('prodAdd').onclick=function(){
   setTimeout(closeProductModal,700);
 };
 
-/* Initialisation et gestion du vendeur */
+/* Initialisation et gestion du vendeur (Dropdown multi-sélection) */
 function initVendeur() {
-  var select = el('vendeur-select');
-  if (!select) return;
+  var btn = el('vendeur-btn');
+  var menu = el('vendeur-menu');
+  var addBtn = el('vendeur-add-btn');
+  if (!btn || !menu) return;
 
-  // 1. Lire depuis URL params puis localStorage
+  // Toggle du menu
+  btn.onclick = function(e) {
+    e.stopPropagation();
+    menu.classList.toggle('show');
+    btn.classList.toggle('active');
+  };
+
+  // Fermer le menu si clic à l'extérieur
+  document.addEventListener('click', function(e) {
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+      btn.classList.remove('active');
+    }
+  });
+
+  // Fonction pour mettre à jour la sélection à partir des cases cochées
+  function updateSelection() {
+    var checked = [];
+    var checkboxes = menu.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(function(cb) {
+      if (cb.checked) {
+        checked.push(cb.value);
+      }
+    });
+
+    var resultString = checked.join(', ');
+    localStorage.setItem('ridery_vendeur', resultString);
+
+    if (checked.length === 0) {
+      btn.textContent = '👤 Aucun vendeur';
+    } else {
+      btn.textContent = '👤 ' + resultString;
+    }
+    refreshCart(); // Rafraîchit les liens de paniers
+  }
+
+  // Écouter les clics sur les options et les checkboxes
+  menu.onclick = function(e) {
+    var target = e.target;
+    // Si clic sur un label ou conteneur d'option, on gère le toggle
+    var optionRow = target.closest('.vendeur-option');
+    if (optionRow && target.tagName !== 'INPUT') {
+      var cb = optionRow.querySelector('input[type="checkbox"]');
+      if (cb) {
+        cb.checked = !cb.checked;
+        updateSelection();
+      }
+    } else if (target.tagName === 'INPUT' && target.type === 'checkbox') {
+      updateSelection();
+    }
+  };
+
+  // Ajouter un nouveau vendeur personnalisé
+  if (addBtn) {
+    addBtn.onclick = function(e) {
+      e.stopPropagation();
+      var customName = prompt('Entrez le nom du nouveau vendeur :');
+      if (customName) {
+        customName = customName.trim();
+        if (customName) {
+          // Vérifier si existe déjà
+          var exists = false;
+          var checkboxes = menu.querySelectorAll('input[type="checkbox"]');
+          checkboxes.forEach(function(cb) {
+            if (cb.value.toLowerCase() === customName.toLowerCase()) {
+              cb.checked = true;
+              exists = true;
+            }
+          });
+
+          if (!exists) {
+            // Créer dynamiquement une option
+            var id = 'v-' + customName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            var optionDiv = document.createElement('div');
+            optionDiv.className = 'vendeur-option';
+            
+            var input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = id;
+            input.value = customName;
+            input.checked = true;
+
+            var label = document.createElement('label');
+            label.htmlFor = id;
+            label.textContent = customName;
+
+            optionDiv.appendChild(input);
+            optionDiv.appendChild(label);
+
+            // Insérer avant le diviseur
+            var divider = menu.querySelector('.vendeur-divider');
+            menu.insertBefore(optionDiv, divider);
+          }
+          updateSelection();
+        }
+      }
+    };
+  }
+
+  // Initialisation à partir d'URL ou localStorage
   var urlParams = new URLSearchParams(window.location.search);
   var vName = urlParams.get('vendeur') || urlParams.get('v');
   if (vName) {
@@ -2051,58 +2258,50 @@ function initVendeur() {
     vName = localStorage.getItem('ridery_vendeur') || '';
   }
 
-  // 2. Si le vendeur n'est pas dans la liste pré-remplie, l'ajouter
   if (vName) {
-    var exists = false;
-    for (var i = 0; i < select.options.length; i++) {
-      if (select.options[i].value.toLowerCase() === vName.toLowerCase()) {
-        select.selectedIndex = i;
-        exists = true;
-        break;
+    // Il peut y avoir plusieurs vendeurs séparés par une virgule
+    var selectedList = vName.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    var checkboxes = menu.querySelectorAll('input[type="checkbox"]');
+    
+    selectedList.forEach(function(name) {
+      var found = false;
+      checkboxes.forEach(function(cb) {
+        if (cb.value.toLowerCase() === name.toLowerCase()) {
+          cb.checked = true;
+          found = true;
+        }
+      });
+
+      // Si pas trouvé dans la liste pré-remplie, on le crée
+      if (!found) {
+        var id = 'v-' + name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        var optionDiv = document.createElement('div');
+        optionDiv.className = 'vendeur-option';
+        
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = id;
+        input.value = name;
+        input.checked = true;
+
+        var label = document.createElement('label');
+        label.htmlFor = id;
+        label.textContent = name;
+
+        optionDiv.appendChild(input);
+        optionDiv.appendChild(label);
+
+        var divider = menu.querySelector('.vendeur-divider');
+        menu.insertBefore(optionDiv, divider);
+        
+        // Rafraîchir la liste locale des checkboxes pour les sélections suivantes
+        checkboxes = menu.querySelectorAll('input[type="checkbox"]');
       }
-    }
-    if (!exists) {
-      // Ajouter une nouvelle option pour ce vendeur personnalisé
-      var opt = document.createElement('option');
-      opt.value = vName;
-      opt.textContent = '👤 ' + vName;
-      // Insérer avant l'option "custom" (+ Autre...)
-      select.insertBefore(opt, select.options[select.options.length - 1]);
-      select.value = vName;
-    }
-  } else {
-    select.value = '';
+    });
   }
 
-  // 3. Écouter les changements du menu déroulant
-  var lastValue = select.value;
-  select.onchange = function() {
-    var val = select.value;
-    if (val === 'custom') {
-      var customName = prompt('Entrez le nom du nouveau vendeur :');
-      if (customName) {
-        customName = customName.trim();
-        if (customName) {
-          // Créer l'option
-          var opt = document.createElement('option');
-          opt.value = customName;
-          opt.textContent = '👤 ' + customName;
-          select.insertBefore(opt, select.options[select.options.length - 1]);
-          select.value = customName;
-          localStorage.setItem('ridery_vendeur', customName);
-          lastValue = customName;
-          refreshCart(); // Rafraîchit le bouton de commande immédiat si présent
-          return;
-        }
-      }
-      // Si annulé ou vide, on remet la valeur précédente
-      select.value = lastValue;
-    } else {
-      localStorage.setItem('ridery_vendeur', val);
-      lastValue = val;
-      refreshCart(); // Rafraîchit le bouton de commande immédiat si présent
-    }
-  };
+  // Première mise à jour visuelle du bouton
+  updateSelection();
 }
 
 /* ============================================================ */
