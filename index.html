@@ -374,6 +374,13 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .vendeur-add-btn:hover {
   background: var(--orange-soft);
 }
+
+/* Discount drawer active buttons style */
+.cart .discount-type-btn.active {
+  background: var(--paper) !important;
+  color: var(--orange-d) !important;
+  border-color: var(--paper) !important;
+}
 </style>
 </head>
 <body>
@@ -537,6 +544,39 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 
 <div class="cart" id="cart">
   <div class="cartopts" id="cartOpts"></div>
+  
+  <!-- Collapsible Discount Drawer -->
+  <div class="cart-discount-drawer" id="cartDiscountDrawer" style="display:none; padding:12px 0 2px 0; border-bottom:1px solid rgba(255,255,255,0.15); margin-bottom:10px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:0.62em; color:rgba(255,255,255,0.7); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Type de remise</label>
+        <div style="display:flex; gap:4px; height:26px;">
+          <button id="btn-discount-pct" type="button" class="discount-type-btn active" style="flex:1; padding:0; font-size:0.68em; font-family:inherit; font-weight:700; border-radius:4px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.1); color:#fff; cursor:pointer; transition:all 0.2s;">Pourcentage (%)</button>
+          <button id="btn-discount-eur" type="button" class="discount-type-btn" style="flex:1; padding:0; font-size:0.68em; font-family:inherit; font-weight:700; border-radius:4px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.1); color:#fff; cursor:pointer; transition:all 0.2s;">Montant (€)</button>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:0.62em; color:rgba(255,255,255,0.7); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Valeur</label>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <select id="discount-val-select" style="flex:1; font-family:inherit; font-size:0.75em; font-weight:700; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:3px; height:26px; outline:none;">
+            <!-- Populated dynamically -->
+          </select>
+          <input type="number" id="discount-val-input" placeholder="Val..." style="display:none; font-family:inherit; font-size:0.75em; font-weight:700; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:3px 6px; width:60px; height:26px; outline:none;" min="0" />
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:0.62em; color:rgba(255,255,255,0.7); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Motif de la remise (Optionnel)</label>
+        <input type="text" id="discount-motif-input" placeholder="Geste, expo, etc..." style="font-family:inherit; font-size:0.72em; font-weight:600; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:3px 8px; height:26px; outline:none;" />
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:0.62em; color:rgba(255,255,255,0.7); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">Code Shopify (Optionnel)</label>
+        <input type="text" id="discount-shopify-code" placeholder="ex: PROMO10" style="font-family:inherit; font-size:0.72em; font-weight:700; background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:4px; padding:3px 8px; height:26px; outline:none; text-transform:uppercase;" />
+      </div>
+    </div>
+  </div>
+
   <div class="row">
     <div style="display:flex; align-items:center; gap:16px;">
       <div>
@@ -545,17 +585,9 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
         <span class="over" id="cartOver" style="display:none"></span>
       </div>
       
-      <div class="cart-discount-section" style="display:flex; flex-direction:column; gap:2px; border-left:1px solid rgba(255,255,255,0.2); padding-left:12px;">
+      <div id="cart-discount-trigger" style="display:flex; flex-direction:column; gap:2px; border-left:1px solid rgba(255,255,255,0.2); padding-left:12px; cursor:pointer; user-select:none;">
         <span class="n" style="font-size:0.65em; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:1.5px; font-weight:800; display:block;">Remise</span>
-        <select id="cart-discount" style="font-family:inherit; font-size:0.75em; font-weight:700; background:transparent; color:#fff; border:1.5px dashed rgba(255,255,255,0.4); border-radius:4px; padding:2px 4px; cursor:pointer; outline:none; transition:all 0.2s;">
-          <option value="0" style="color:#000">Aucune</option>
-          <option value="5" style="color:#000">-5%</option>
-          <option value="10" style="color:#000">-10%</option>
-          <option value="15" style="color:#000">-15%</option>
-          <option value="20" style="color:#000">-20%</option>
-          <option value="custom" style="color:#000">Code promo...</option>
-        </select>
-        <input type="text" id="cart-discount-code" placeholder="Code..." style="display:none; font-family:inherit; font-size:0.7em; width:80px; padding:1px 4px; border-radius:4px; border:1px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.15); color:#fff; font-weight:600; text-transform:uppercase;" />
+        <span id="cart-discount-badge" style="font-size:0.75em; font-weight:700; color:#fff; border:1.5px dashed rgba(255,255,255,0.4); border-radius:12px; padding:2px 8px; background:rgba(255,255,255,0.1); white-space:nowrap; transition:all 0.2s;"> Aucune</span>
       </div>
     </div>
     <button class="save" id="cartSave" type="button">+ OPTION</button>
@@ -614,7 +646,11 @@ var CFG={
     '5':'RIDERY5',
     '10':'RIDERY10',
     '15':'RIDERY15',
-    '20':'RIDERY20'
+    '20':'RIDERY20',
+    '50EUR':'RIDERY50',
+    '100EUR':'RIDERY100',
+    '150EUR':'RIDERY150',
+    '200EUR':'RIDERY200'
   }
 };
 
@@ -2388,94 +2424,229 @@ function initVendeur() {
   updateSelection();
 }
 
+/* Récupère le type de remise active : "percent" ou "euro" */
+function getActiveDiscountType() {
+  return localStorage.getItem('ridery_discount_mode') || 'percent';
+}
+
 /* Récupère le pourcentage de remise sélectionné */
 function getActiveDiscountPercent() {
-  var select = el('cart-discount');
+  if (getActiveDiscountType() !== 'percent') return 0;
+  var select = el('discount-val-select');
   if (!select) return 0;
   var val = select.value;
-  if (val && val !== 'custom') {
-    return parseInt(val, 10) || 0;
+  if (val === 'custom') {
+    var valInput = el('discount-val-input');
+    return valInput ? parseInt(valInput.value, 10) || 0 : 0;
   }
-  return 0;
+  return parseInt(val, 10) || 0;
+}
+
+/* Récupère la valeur en euros sélectionnée */
+function getActiveDiscountEuros() {
+  if (getActiveDiscountType() !== 'euro') return 0;
+  var select = el('discount-val-select');
+  if (!select) return 0;
+  var val = select.value;
+  if (val === 'custom') {
+    var valInput = el('discount-val-input');
+    return valInput ? parseInt(valInput.value, 10) || 0 : 0;
+  }
+  return parseInt(val, 10) || 0;
 }
 
 /* Récupère le code de réduction correspondant (Shopify) ou custom */
 function getActiveDiscountCode() {
-  var select = el('cart-discount');
+  var codeInput = el('discount-shopify-code');
+  var valCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
+  if (valCode) return valCode;
+
+  // Si pas de code custom saisi, on génère un code automatique si c'est une remise prédéfinie
+  var select = el('discount-val-select');
   if (!select) return '';
   var val = select.value;
-  if (val === 'custom') {
-    var codeInput = el('cart-discount-code');
-    return codeInput ? codeInput.value.trim().toUpperCase() : '';
-  }
-  if (val && val !== '0') {
-    return (CFG.DISCOUNT_CODES && CFG.DISCOUNT_CODES[val]) || '';
+  if (val && val !== 'custom' && val !== '0') {
+    var key = val;
+    if (getActiveDiscountType() === 'euro') {
+      key += 'EUR';
+    }
+    return (CFG.DISCOUNT_CODES && CFG.DISCOUNT_CODES[key]) || '';
   }
   return '';
 }
 
-/* Initialise la gestion de la remise */
-function initDiscount() {
-  var select = el('cart-discount');
-  var codeInput = el('cart-discount-code');
-  if (!select || !codeInput) return;
+/* Récupère le motif de la remise */
+function getActiveDiscountMotif() {
+  var motifInput = el('discount-motif-input');
+  return motifInput ? motifInput.value.trim() : '';
+}
 
-  // Charger les valeurs depuis localStorage ou URL
+/* Initialise la gestion de la remise (collapsible drawer + % vs €) */
+function initDiscount() {
+  var trigger = el('cart-discount-trigger');
+  var drawer = el('cartDiscountDrawer');
+  var btnPct = el('btn-discount-pct');
+  var btnEur = el('btn-discount-eur');
+  var valSelect = el('discount-val-select');
+  var valInput = el('discount-val-input');
+  var motifInput = el('discount-motif-input');
+  var codeInput = el('discount-shopify-code');
+
+  if (!drawer || !btnPct || !btnEur || !valSelect || !valInput) return;
+
+  // Toggle du tiroir
+  if (trigger) {
+    trigger.onclick = function(e) {
+      e.stopPropagation();
+      var isHidden = drawer.style.display === 'none';
+      drawer.style.display = isHidden ? 'block' : 'none';
+      var badge = el('cart-discount-badge');
+      if (badge) {
+        badge.style.borderColor = isHidden ? '#fff' : 'rgba(255,255,255,0.4)';
+        badge.style.background = isHidden ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
+      }
+    };
+  }
+
+  // Changer de mode : % vs €
+  function setDiscountMode(mode) {
+    localStorage.setItem('ridery_discount_mode', mode);
+    if (mode === 'percent') {
+      btnPct.classList.add('active');
+      btnEur.classList.remove('active');
+    } else {
+      btnEur.classList.add('active');
+      btnPct.classList.remove('active');
+    }
+    populateValuesSelect();
+  }
+
+  btnPct.onclick = function() { setDiscountMode('percent'); };
+  btnEur.onclick = function() { setDiscountMode('euro'); };
+
+  // Remplit le sélecteur selon le mode choisi (% ou €)
+  function populateValuesSelect() {
+    var mode = getActiveDiscountType();
+    var savedVal = localStorage.getItem('ridery_discount_val_' + mode) || '0';
+    
+    var optionsHtml = '';
+    if (mode === 'percent') {
+      optionsHtml = '<option value="0" style="color:#000">Aucune (0%)</option>' +
+                    '<option value="5" style="color:#000">-5%</option>' +
+                    '<option value="10" style="color:#000">-10%</option>' +
+                    '<option value="15" style="color:#000">-15%</option>' +
+                    '<option value="20" style="color:#000">-20%</option>' +
+                    '<option value="custom" style="color:#000">Pourcentage perso...</option>';
+    } else {
+      optionsHtml = '<option value="0" style="color:#000">Aucune (0€)</option>' +
+                    '<option value="50" style="color:#000">-50 €</option>' +
+                    '<option value="100" style="color:#000">-100 €</option>' +
+                    '<option value="150" style="color:#000">-150 €</option>' +
+                    '<option value="200" style="color:#000">-200 €</option>' +
+                    '<option value="custom" style="color:#000">Montant perso...</option>';
+    }
+    valSelect.innerHTML = optionsHtml;
+    valSelect.value = savedVal;
+
+    // Affiche/masque l'input de valeur personnalisée
+    if (savedVal === 'custom') {
+      valInput.style.display = 'block';
+      valInput.value = localStorage.getItem('ridery_discount_custom_' + mode) || '';
+    } else {
+      valInput.style.display = 'none';
+    }
+    refreshCart();
+  }
+
+  valSelect.onchange = function() {
+    var mode = getActiveDiscountType();
+    var val = valSelect.value;
+    localStorage.setItem('ridery_discount_val_' + mode, val);
+    
+    if (val === 'custom') {
+      valInput.style.display = 'block';
+      valInput.value = '';
+      valInput.focus();
+      localStorage.setItem('ridery_discount_custom_' + mode, '');
+    } else {
+      valInput.style.display = 'none';
+    }
+    refreshCart();
+  };
+
+  valInput.oninput = function() {
+    var mode = getActiveDiscountType();
+    var v = parseInt(valInput.value, 10) || 0;
+    localStorage.setItem('ridery_discount_custom_' + mode, v);
+    refreshCart();
+  };
+
+  // Écouter motif et code Shopify
+  if (motifInput) {
+    motifInput.value = localStorage.getItem('ridery_discount_motif') || '';
+    motifInput.oninput = function() {
+      localStorage.setItem('ridery_discount_motif', motifInput.value.trim());
+      refreshCart();
+    };
+  }
+
+  if (codeInput) {
+    codeInput.value = localStorage.getItem('ridery_discount_code') || '';
+    codeInput.oninput = function() {
+      localStorage.setItem('ridery_discount_code', codeInput.value.trim().toUpperCase());
+      refreshCart();
+    };
+  }
+
+  // Initialisation à partir d'URL ou localStorage
   var urlParams = new URLSearchParams(window.location.search);
   var urlDiscount = urlParams.get('discount') || urlParams.get('code');
+  var urlMotif = urlParams.get('motif');
+  
+  if (urlMotif) {
+    localStorage.setItem('ridery_discount_motif', decodeURIComponent(urlMotif).trim());
+    if (motifInput) motifInput.value = decodeURIComponent(urlMotif).trim();
+  }
+
+  // Initialisation du mode et valeur
+  var initialMode = localStorage.getItem('ridery_discount_mode') || 'percent';
   
   if (urlDiscount) {
     urlDiscount = decodeURIComponent(urlDiscount).trim().toUpperCase();
-    // Vérifier si c'est un de nos pourcentages prédéfinis
+    
+    // Déterminer s'il s'agit d'un pourcentage ou d'un montant
     var matchedPct = null;
+    var matchedEur = null;
+    
     if (CFG.DISCOUNT_CODES) {
       Object.keys(CFG.DISCOUNT_CODES).forEach(function(k) {
         if (CFG.DISCOUNT_CODES[k].toUpperCase() === urlDiscount.toUpperCase()) {
-          matchedPct = k;
+          if (k.indexOf('EUR') !== -1) {
+            matchedEur = k.replace('EUR', '');
+          } else {
+            matchedPct = k;
+          }
         }
       });
     }
-    
+
     if (matchedPct) {
-      select.value = matchedPct;
-      localStorage.setItem('ridery_discount_type', matchedPct);
+      initialMode = 'percent';
+      localStorage.setItem('ridery_discount_val_percent', matchedPct);
+    } else if (matchedEur) {
+      initialMode = 'euro';
+      localStorage.setItem('ridery_discount_val_euro', matchedEur);
     } else {
-      select.value = 'custom';
-      codeInput.value = urlDiscount;
-      codeInput.style.display = 'block';
-      localStorage.setItem('ridery_discount_type', 'custom');
+      // Code personnalisé (ex. SUMMER10) -> Mode custom
+      initialMode = 'percent';
+      localStorage.setItem('ridery_discount_val_percent', 'custom');
+      localStorage.setItem('ridery_discount_custom_percent', '0'); // On ne connait pas le %
       localStorage.setItem('ridery_discount_code', urlDiscount);
-    }
-  } else {
-    var savedType = localStorage.getItem('ridery_discount_type') || '0';
-    var savedCode = localStorage.getItem('ridery_discount_code') || '';
-    select.value = savedType;
-    if (savedType === 'custom') {
-      codeInput.value = savedCode;
-      codeInput.style.display = 'block';
+      if (codeInput) codeInput.value = urlDiscount;
     }
   }
 
-  // Écouter les changements
-  select.onchange = function() {
-    var val = select.value;
-    if (val === 'custom') {
-      codeInput.style.display = 'block';
-      codeInput.value = '';
-      codeInput.focus();
-      localStorage.setItem('ridery_discount_type', 'custom');
-      localStorage.setItem('ridery_discount_code', '');
-    } else {
-      codeInput.style.display = 'none';
-      localStorage.setItem('ridery_discount_type', val);
-    }
-    refreshCart();
-  };
-
-  codeInput.oninput = function() {
-    localStorage.setItem('ridery_discount_code', codeInput.value.trim().toUpperCase());
-    refreshCart();
-  };
+  setDiscountMode(initialMode);
 }
 
 /* ============================================================ */
