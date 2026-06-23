@@ -1570,22 +1570,21 @@ function renderCatalog(){
       p._matchedVariant=r.variant;
     });
     var totalAvailable=list.length;
-    list=list.filter(function(p){return !cat.sized||p._score>=THRESHOLD});
-    if(!list.length){
-      anyShown=true;
-      html+='<div class="catgroup" data-cat="'+cat.key+'">'+
-        '<h4><span class="lbl">'+cat.label+'</span>'+
-        '<span class="count">0 dans ta taille</span><span class="arrow">+</span></h4>'+
-        '<div class="items"><div class="empty">Aucun produit ne correspond exactement à ta taille en stock. <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#22d8c8">Voir toute la collection ('+totalAvailable+' produits)</a></div></div>'+
-      '</div>';
-      return;
+    var filteredList=list.filter(function(p){return !cat.sized||p._score>=THRESHOLD});
+    
+    var showEmptyBanner = false;
+    if(!filteredList.length){
+      // On ne masque plus : on montre tout avec un message
+      filteredList = list;
+      showEmptyBanner = true;
     }
+    
     anyShown=true;
-    cat._all=list;
-    cat._state={recoOnly:true,priceDir:'asc'};
-    var recoCount=list.filter(function(p){return p._reco}).length;
-    var initial=sortProducts(list.filter(function(p){return p._reco}),'asc', cat.sortByBrand);
-    if(!initial.length)initial=sortProducts(list,'asc', cat.sortByBrand);
+    cat._all=filteredList;
+    cat._state={recoOnly: !showEmptyBanner, priceDir:'asc'};
+    var recoCount=filteredList.filter(function(p){return p._reco}).length;
+    var initial=sortProducts(showEmptyBanner ? filteredList : filteredList.filter(function(p){return p._reco}), 'asc', cat.sortByBrand);
+    if(!initial.length)initial=sortProducts(filteredList,'asc', cat.sortByBrand);
     
     if(cat.key === 'platine') {
       html += '<div style="grid-column: 1 / -1; margin-top: 14px; padding-top: 24px; border-top: 1px solid var(--line); font-family: \'Staatliches\', sans-serif; font-size: 1.4em; letter-spacing: 1.5px; color: var(--ink);">Crée ton foil sur mesure :</div>';
@@ -1594,13 +1593,13 @@ function renderCatalog(){
     var unitLabel = cat.unit ? ' (' + cat.unit + ')' : '';
     html+='<div class="catgroup" data-cat="'+cat.key+'">'+
       '<h4><span class="lbl">'+cat.label+'</span>'+
-      '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
+      '<span class="count">' + (showEmptyBanner ? '0 dans ta taille' : (filteredList.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':''))) + '</span>'+
       '<span class="arrow">+</span></h4>'+
       '<div class="toolbar">'+
         '<span class="lbl">Filtre</span>'+
         '<div class="grp" data-grp="filter">'+
-          '<button class="on" data-v="reco">Reco</button>'+
-          '<button data-v="all">Tous</button>'+
+          '<button class="' + (showEmptyBanner ? '' : 'on') + '" data-v="reco">Reco</button>'+
+          '<button class="' + (showEmptyBanner ? 'on' : '') + '" data-v="all">Tous</button>'+
         '</div>'+
         '<div class="f-row">'+
           '<span class="lbl" style="margin-left:12px">Taille' + unitLabel + '</span>'+
@@ -1616,7 +1615,10 @@ function renderCatalog(){
           '<button data-v="desc">↓ + cher</button>'+
         '</div>'+
       '</div>'+
-      '<div class="items">'+initial.map(function(p){return productCard(p,p._reco)}).join('')+'</div>'+
+      '<div class="items">'+
+        (showEmptyBanner ? '<div class="empty" style="margin-bottom:16px;">Aucun produit ne correspond exactement à ta taille en stock. Voici toute la collection ('+totalAvailable+' produits) :</div>' : '') +
+        initial.map(function(p){return productCard(p,p._reco)}).join('')+
+      '</div>'+
     '</div>';
   });
 
