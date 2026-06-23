@@ -2007,8 +2007,8 @@ function buildOptionsHtml(allOptions){
         )+
       '</td></tr>'+
       '<tr><td style="padding:6px 18px 14px 18px;">'+rows+'</td></tr>'+
-      // Hide the button in the HTML block for the first option (invoice), it will be added natively in the Klaviyo template
-      (url === window._overrideInvoiceUrl ? '' :
+      // Always hide the button for Option 1 because it's now handled directly in the Klaviyo template
+      (idx === 0 ? '' :
       '<tr><td align="center" style="padding:0 18px 18px 18px;">'+
         '<table role="presentation" border="0" cellspacing="0" cellpadding="0"><tr>'+
           '<td align="center" style="background:linear-gradient(135deg,#22d8c8 0%,#0d9d92 100%);background-color:#22d8c8;border-radius:12px;box-shadow:0 8px 20px rgba(34,216,200,.28);">'+
