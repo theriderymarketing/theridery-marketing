@@ -690,7 +690,11 @@ var CATEGORY_MAP={
     {key:'aile',     titles:['ailes de wingfoil','ailes de wing','aile de wing','ailes wing','aile wing','wings','wing'], unit:'m²', label:'Ailes de wing', sized:true},
     {key:'planche_r',titles:['planches rigides wingfoil','planches rigides wing','wingboard rigide','planches rigides','board rigide wing'], unit:'L', label:'Planches rigides', sized:true},
     {key:'planche_g',titles:['planches gonflables wingfoil','planches gonflables wing','wingboard gonflable','planches gonflables','board gonflable'], unit:'L', label:'Planches gonflables', sized:true},
-    {key:'foil',     titles:['foil complet wing','foil complet','foils wing','foil wing','foil','foils','mats','mâts','kits foil'], unit:'cm²', label:'Foils & mâts', sized:true}
+    {key:'foil',     titles:['foil complet wing','foil complet','foils wing','foil wing','foil','foils'], unit:'cm²', label:'Foils complets', sized:true},
+    {key:'platine',  titles:['platine', 'platines'], unit:null, label:'Platine', sized:false, sortByBrand:true},
+    {key:'mat',      titles:['mat f-one', 'mâts', 'mats', 'mât'], unit:'cm', label:'Mât', sized:true, sortByBrand:true},
+    {key:'titan',    titles:['titan', 'fuselage wing', 'fuselages', 'fuselage'], unit:null, label:'Titan / Fuselage', sized:false, sortByBrand:true},
+    {key:'avion',    titles:['avion / plane wing', 'avion f-one wing', 'avion neilpryde wing', 'avion', 'avions', 'aile avant wing', 'stabilisateur wing'], unit:'cm²', label:'Avion (Front + Stab)', sized:true, sortByBrand:true}
   ],
   kite:[
     {key:'kite',     titles:['ailes de kitesurf','ailes de kite','ailes kite','aile de kite','kitesurf ailes','kites','kite'], unit:'m²', label:'Ailes de kite', sized:true},
@@ -1456,8 +1460,13 @@ function getProductSize(p,catKey){
 }
 
 /* Trie une liste : taille ASC primaire, prix selon dir ('asc'|'desc') secondaire. */
-function sortProducts(list,priceDir){
+function sortProducts(list,priceDir,sortByBrand){
   return list.slice().sort(function(a,b){
+    if(sortByBrand){
+      var vaBrand = (a.vendor||'').toLowerCase();
+      var vbBrand = (b.vendor||'').toLowerCase();
+      if(vaBrand !== vbBrand) return vaBrand < vbBrand ? -1 : 1;
+    }
     var sa = a._filterSize !== undefined ? a._filterSize : a._size;
     var sb = b._filterSize !== undefined ? b._filterSize : b._size;
     if(sa!==sb)return sa-sb;
@@ -1518,7 +1527,7 @@ function renderCatItems(cat){
     p._filterSize = validVariants[0].size;
     return true;
   });
-  list=sortProducts(list,st.priceDir);
+  list=sortProducts(list,st.priceDir, cat.sortByBrand);
   if(!list.length){
     box.innerHTML='<div class="empty" style="grid-column:1/-1">Aucun produit pour ce filtre.'+(cat.handle?' <a href="'+CFG.STORE+'/collections/'+cat.handle+'" target="_blank" style="color:#22d8c8">Voir toute la collection</a>':'')+'</div>';
     return;
@@ -1575,8 +1584,14 @@ function renderCatalog(){
     cat._all=list;
     cat._state={recoOnly:true,priceDir:'asc'};
     var recoCount=list.filter(function(p){return p._reco}).length;
-    var initial=sortProducts(list.filter(function(p){return p._reco}),'asc');
-    if(!initial.length)initial=sortProducts(list,'asc');
+    var initial=sortProducts(list.filter(function(p){return p._reco}),'asc', cat.sortByBrand);
+    if(!initial.length)initial=sortProducts(list,'asc', cat.sortByBrand);
+    
+    if(cat.key === 'platine') {
+      html += '<div style="grid-column: 1 / -1; margin-top: 14px; padding-top: 24px; border-top: 1px solid var(--line); font-family: \'Staatliches\', sans-serif; font-size: 1.4em; letter-spacing: 1.5px; color: var(--ink);">Crée ton foil sur mesure :</div>';
+    }
+    
+    var unitLabel = cat.unit ? ' (' + cat.unit + ')' : '';
     html+='<div class="catgroup" data-cat="'+cat.key+'">'+
       '<h4><span class="lbl">'+cat.label+'</span>'+
       '<span class="count">'+list.length+' pour toi'+(recoCount?' · '+recoCount+' RECO':'')+'</span>'+
@@ -1587,11 +1602,13 @@ function renderCatalog(){
           '<button class="on" data-v="reco">Reco</button>'+
           '<button data-v="all">Tous</button>'+
         '</div>'+
-        '<span class="lbl" style="margin-left:12px">Taille</span>'+
-        '<div class="grp" data-grp="size-range" style="display:flex; align-items:center; gap:4px; margin-left:4px; border:none; padding:0; background:none; box-shadow:none;">'+
-          '<input type="number" class="size-min" placeholder="Min" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
-          '<span style="font-size:12px;color:#6b7280;text-transform:none;">à</span>'+
-          '<input type="number" class="size-max" placeholder="Max" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
+        '<div class="f-row">'+
+          '<span class="lbl" style="margin-left:12px">Taille' + unitLabel + '</span>'+
+          '<div class="grp" data-grp="size-range" style="display:flex; align-items:center; gap:4px; margin-left:4px; border:none; padding:0; background:none; box-shadow:none;">'+
+            '<input type="number" class="size-min" placeholder="Min" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
+            '<span style="font-size:12px;color:#6b7280;text-transform:none;">à</span>'+
+            '<input type="number" class="size-max" placeholder="Max" style="width:50px;text-align:center;border:1px solid rgba(34, 216, 200, 0.5);border-radius:20px;padding:4px 8px;font-size:12px;outline:none;background:#fff;" />'+
+          '</div>'+
         '</div>'+
         '<span class="lbl" style="margin-left:auto">Prix (à taille égale)</span>'+
         '<div class="grp" data-grp="price">'+
