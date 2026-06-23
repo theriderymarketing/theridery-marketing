@@ -2113,8 +2113,43 @@ function sendDevis(){
 
   // UI : ecran de confirmation immediat (pas d'attente Klaviyo bloquante)
   el('openCart').href=url;
-  el('doneMsg').innerHTML='On t\'envoie le panier par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
+  el('doneMsg').innerHTML='Génération de la facture officielle The Ridery en cours...';
   show('s4');
+
+  // Push vers le nouveau Backend (Draft Order API) pour envoyer la VRAIE facture Shopify
+  var draftOrderPayload = {
+    customer: { email: email, firstName: prenom, lastName: nom },
+    vendeur: vendeur || '',
+    items: Object.keys(allOptions[0].items).map(function(vid) {
+      return { variant_id: vid, quantity: 1 };
+    })
+  };
+  
+  if (hasDiscount || dCode) {
+    draftOrderPayload.discount = {
+      type: mode,
+      value: (mode === 'percent' ? pct : eur) || 0,
+      code: dCode || motif || 'Remise Simulateur'
+    };
+  }
+
+  fetch('https://rental-saas.vercel.app/api/simulator/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(draftOrderPayload)
+  }).then(function(r){ return r.json(); })
+  .then(function(data){
+    if (data.success && data.url) {
+      el('openCart').href = data.url;
+      el('openCart').textContent = 'Ouvrir la facture →';
+      el('doneMsg').innerHTML = 'La facture The Ridery a bien été envoyée par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
+    } else {
+      throw new Error(data.error || 'API renvoie une erreur');
+    }
+  }).catch(function(err){
+    console.error('Draft Order API Error:', err);
+    el('doneMsg').innerHTML = 'Impossible de générer la facture. Un panier classique a été envoyé à <b>'+escapeHtml(email)+'</b>.';
+  });
 
   // Push Klaviyo en arriere-plan
   pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
