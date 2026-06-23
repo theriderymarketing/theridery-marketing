@@ -2160,19 +2160,24 @@ function sendDevis(){
       el('openCart').href = data.url;
       el('openCart').textContent = 'Ouvrir la facture →';
       el('doneMsg').innerHTML = 'La facture The Ridery a bien été envoyée par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
+      
+      // Update properties with the new invoice URL before sending to Klaviyo
+      properties.cart_url = data.url;
+      properties.invoice_url = data.url;
+      profile.properties.derniere_simu_url = data.url;
     } else {
       throw new Error(data.error || 'API renvoie une erreur');
     }
   }).catch(function(err){
     console.error('Draft Order API Error:', err);
     el('doneMsg').innerHTML = 'Impossible de générer la facture. Un panier classique a été envoyé à <b>'+escapeHtml(email)+'</b>.';
-  });
-
-  // Push Klaviyo en arriere-plan
-  pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
-    if(!ok){
-      el('doneMsg').innerHTML='Ton panier est prêt. <b>Clique ci-dessous pour l\'ouvrir directement sur The Ridery.</b><br><span style="font-size:.85em;color:#9ca3af">(Si tu n\'as pas reçu l\'email dans 5 min, écris à marketing@theridery.com)</span>';
-    }
+  }).finally(function(){
+    // Push Klaviyo en arriere-plan
+    pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
+      if(!ok && el('doneMsg').innerHTML.indexOf('Génération') !== -1){
+        el('doneMsg').innerHTML='Ton panier est prêt. <b>Clique ci-dessous pour l\'ouvrir.</b>';
+      }
+    });
   });
 
   // Optionnel : Formspree fallback si configure
