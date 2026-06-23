@@ -2007,13 +2007,16 @@ function buildOptionsHtml(allOptions){
         )+
       '</td></tr>'+
       '<tr><td style="padding:6px 18px 14px 18px;">'+rows+'</td></tr>'+
+      // Hide the button in the HTML block for the first option (invoice), it will be added natively in the Klaviyo template
+      (url === window._overrideInvoiceUrl ? '' :
       '<tr><td align="center" style="padding:0 18px 18px 18px;">'+
         '<table role="presentation" border="0" cellspacing="0" cellpadding="0"><tr>'+
           '<td align="center" style="background:linear-gradient(135deg,#22d8c8 0%,#0d9d92 100%);background-color:#22d8c8;border-radius:12px;box-shadow:0 8px 20px rgba(34,216,200,.28);">'+
             '<a href="'+(url||'#')+'" target="_blank" style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:14px;letter-spacing:2.5px;text-transform:uppercase;font-weight:400;">Ouvrir cette option →</a>'+
           '</td>'+
         '</tr></table>'+
-      '</td></tr>'+
+      '</td></tr>'
+      ) +
     '</table>';
     return html;
   }).join('');
