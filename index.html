@@ -1605,7 +1605,22 @@ function refreshCart(){
   var total=ids.reduce(function(s,k){return s+S.selected[k].price},0);
   var bar=el('cart');
   
+  var mode = getActiveDiscountType();
   var pct = getActiveDiscountPercent();
+  var eur = getActiveDiscountEuros();
+  var hasDiscount = (mode === 'percent' && pct > 0) || (mode === 'euro' && eur > 0);
+
+  // Update discount badge text in the cart bar
+  var badge = el('cart-discount-badge');
+  if (badge) {
+    if (mode === 'percent' && pct > 0) {
+      badge.textContent = '-' + pct + '%';
+    } else if (mode === 'euro' && eur > 0) {
+      badge.textContent = '-' + eur + ' €';
+    } else {
+      badge.textContent = ' Aucune';
+    }
+  }
   
   // Render strip des options sauvegardees
   var opts=el('cartOpts');
@@ -1613,8 +1628,8 @@ function refreshCart(){
     var nb=Object.keys(o.items).length;
     var t=optionTotal(o);
     var tText = t + '€';
-    if (pct > 0) {
-      var dt = Math.round(t * (1 - pct / 100));
+    if (hasDiscount) {
+      var dt = getDiscountedTotal(t);
       tText = dt + '€ <s style="opacity:0.65;font-size:0.95em;margin-left:4px;">' + t + '€</s>';
     }
     return '<span class="opt" data-id="'+o.id+'"><b>'+escapeHtml(o.name)+'</b>'+nb+' art · '+tText+'<button class="x" data-rem="'+o.id+'" type="button">×</button></span>';
@@ -1628,8 +1643,8 @@ function refreshCart(){
   el('cartN').textContent=n?('Option '+currentOptIdx+' en cours · '+n+' article'+(n>1?'s':'')):'Démarre une nouvelle option';
   
   // Display total (remisé ou non)
-  if (pct > 0) {
-    var discountedTotal = Math.round(total * (1 - pct / 100));
+  if (hasDiscount) {
+    var discountedTotal = getDiscountedTotal(total);
     el('cartT').innerHTML = discountedTotal + ' € <s style="font-size:0.6em; opacity:0.75; font-family:\'Montserrat\',sans-serif; margin-left:6px; font-weight:normal;">' + total + ' €</s>';
   } else {
     el('cartT').textContent = total + ' €';
@@ -1640,7 +1655,7 @@ function refreshCart(){
   el('cartGo').disabled=(n===0 && !S.options.length);
   
   var over=el('cartOver');
-  var compareTotal = pct > 0 ? Math.round(total * (1 - pct / 100)) : total;
+  var compareTotal = hasDiscount ? getDiscountedTotal(total) : total;
   if(S.profile.budget && compareTotal>S.profile.budget){
     over.style.display='block';
     over.textContent='Option en cours au-dessus du budget de '+(compareTotal-S.profile.budget)+'€';
@@ -1657,7 +1672,7 @@ function buildCartUrl(items){
   var parts=Object.keys(targetItems).map(function(vid){return vid+':1'});
   if(!parts.length)return null;
   
-  var url = CFG.STORE+'/cart/'+parts.join(',');
+  var cartPath = '/cart/' + parts.join(',');
   var params = [];
   
   // Paramètres UTM de base pour le suivi
@@ -1674,13 +1689,21 @@ function buildCartUrl(items){
     params.push('attributes[Vendeur]=' + encodeURIComponent(vendeur));
   }
 
-  // Appliquer le code de réduction Shopify si présent
+  // Attribut de panier Shopify pour le motif de remise (si présent)
+  var motif = getActiveDiscountMotif();
+  if (motif) {
+    params.push('attributes[Motif Remise]=' + encodeURIComponent(motif));
+  }
+
   var dCode = getActiveDiscountCode();
   if (dCode) {
-    params.push('discount=' + encodeURIComponent(dCode));
+    // Si on a un code de réduction, on passe par la route de redirection Shopify /discount/CODE?redirect=...
+    // Les attributs et paramètres UTM doivent être attachés au chemin final de redirection
+    var redirectUrl = cartPath + '?' + params.join('&');
+    return CFG.STORE + '/discount/' + encodeURIComponent(dCode) + '?redirect=' + encodeURIComponent(redirectUrl);
+  } else {
+    return CFG.STORE + cartPath + '?' + params.join('&');
   }
-  
-  return url + '?' + params.join('&');
 }
 
 function buildEmailBody(){
@@ -1708,11 +1731,19 @@ function buildEmailBody(){
   });
   lines.push('');
   var pct = getActiveDiscountPercent();
+  var eur = getActiveDiscountEuros();
   var dCode = getActiveDiscountCode();
-  if (pct > 0) {
-    var dt = Math.round(total * (1 - pct / 100));
+  var mode = getActiveDiscountType();
+  var hasDiscount = (mode === 'percent' && pct > 0) || (mode === 'euro' && eur > 0);
+
+  if (hasDiscount) {
+    var dt = getDiscountedTotal(total);
     lines.push('TOTAL PUBLIC : '+total+'€');
-    lines.push('REMISE : -'+pct+'% '+(dCode ? '(Code: '+dCode+')' : ''));
+    if (mode === 'percent') {
+      lines.push('REMISE : -'+pct+'% '+(dCode ? '(Code: '+dCode+')' : ''));
+    } else {
+      lines.push('REMISE : -'+eur+'€ '+(dCode ? '(Code: '+dCode+')' : ''));
+    }
     lines.push('TOTAL REMISÉ : '+dt+'€');
   } else if (dCode) {
     lines.push('TOTAL : '+total+'€');
@@ -1845,11 +1876,15 @@ function buildOptionsHtml(allOptions){
     // N'affiche le nom personnalise que s'il n'est pas le defaut
     var customName=(o.name && o.name!==defaultName && o.name!=='Option '+(o.id||''))?o.name:'';
     
+    var mode = getActiveDiscountType();
     var pct = getActiveDiscountPercent();
+    var eur = getActiveDiscountEuros();
     var dCode = getActiveDiscountCode();
+    var hasDiscount = (mode === 'percent' && pct > 0) || (mode === 'euro' && eur > 0);
+
     var totalText = total + '€';
-    if (pct > 0) {
-      var dt = Math.round(total * (1 - pct / 100));
+    if (hasDiscount) {
+      var dt = getDiscountedTotal(total);
       totalText = dt + '€ <span style="font-size:0.7em;text-decoration:line-through;opacity:0.8;font-family:Arial,Helvetica,sans-serif;font-weight:normal;margin-left:6px;">' + total + '€</span>';
     }
 
@@ -1874,7 +1909,10 @@ function buildOptionsHtml(allOptions){
           '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:22px;color:#ffffff;letter-spacing:1.5px;line-height:1;">'+totalText+'</td>'+
         '</tr></table>'+
         (customName?'<p style="margin:6px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#ffffff;font-weight:700;line-height:1.2;">'+escapeHtml(customName)+'</p>':'')+
-        (pct > 0 ? '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Remise de -'+pct+'% appliquée'+(dCode?' ('+escapeHtml(dCode)+')':'')+'</p>' : (dCode ? '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Code promo : '+escapeHtml(dCode)+'</p>' : ''))+
+        (hasDiscount ? 
+          '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Remise de ' + (mode === 'percent' ? '-' + pct + '%' : '-' + eur + '€') + ' appliquée' + (dCode ? ' (' + escapeHtml(dCode) + ')' : '') + '</p>' : 
+          (dCode ? '<p style="margin:4px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#ecfeff;font-weight:700;line-height:1.2;text-transform:uppercase;">Code promo : ' + escapeHtml(dCode) + '</p>' : '')
+        )+
       '</td></tr>'+
       '<tr><td style="padding:6px 18px 14px 18px;">'+rows+'</td></tr>'+
       '<tr><td align="center" style="padding:0 18px 18px 18px;">'+
@@ -1911,14 +1949,20 @@ function sendDevis(){
     alert('Ajoute au moins un article avant d\'envoyer le devis.');return;
   }
 
+  var mode = getActiveDiscountType();
   var pct = getActiveDiscountPercent();
+  var eur = getActiveDiscountEuros();
+  var dCode = getActiveDiscountCode();
+  var motif = getActiveDiscountMotif();
+  var hasDiscount = (mode === 'percent' && pct > 0) || (mode === 'euro' && eur > 0);
+
   var allOptions=S.options;
   var firstUrl=optionUrl(allOptions[0])||CFG.STORE;
   var totalAll=allOptions.reduce(function(s,o){return s+optionTotal(o)},0);
   var totalFirst=optionTotal(allOptions[0]);
-  if (pct > 0) {
-    totalAll = Math.round(totalAll * (1 - pct / 100));
-    totalFirst = Math.round(totalFirst * (1 - pct / 100));
+  if (hasDiscount) {
+    totalAll = getDiscountedTotal(totalAll);
+    totalFirst = getDiscountedTotal(totalFirst);
   }
   var nbItemsAll=allOptions.reduce(function(s,o){return s+Object.keys(o.items).length},0);
   var url=firstUrl;
@@ -1977,12 +2021,15 @@ function sendDevis(){
     source:'theriderymarketing.github.io'
   };
 
-  var dCode = getActiveDiscountCode();
-  if (pct > 0 || dCode) {
-    profile.properties.remise_pourcentage = pct;
+  if (hasDiscount || dCode) {
+    profile.properties.remise_pourcentage = mode === 'percent' ? pct : 0;
+    profile.properties.remise_euros = mode === 'euro' ? eur : 0;
     profile.properties.code_reduction = dCode || null;
-    properties.remise_pourcentage = pct;
+    profile.properties.motif_remise = motif || null;
+    properties.remise_pourcentage = mode === 'percent' ? pct : 0;
+    properties.remise_euros = mode === 'euro' ? eur : 0;
     properties.code_reduction = dCode || null;
+    properties.motif_remise = motif || null;
   }
 
   var vendeur = localStorage.getItem('ridery_vendeur');
@@ -2459,6 +2506,18 @@ function getActiveDiscountCode() {
 function getActiveDiscountMotif() {
   var motifInput = el('discount-motif-input');
   return motifInput ? motifInput.value.trim() : '';
+}
+
+/* Calcule le total remisé après application de la réduction active */
+function getDiscountedTotal(total) {
+  var mode = getActiveDiscountType();
+  if (mode === 'percent') {
+    var pct = getActiveDiscountPercent();
+    return Math.max(0, Math.round(total * (1 - pct / 100)));
+  } else {
+    var eur = getActiveDiscountEuros();
+    return Math.max(0, total - eur);
+  }
 }
 
 /* Initialise la gestion de la remise (collapsible drawer + % vs €) */
