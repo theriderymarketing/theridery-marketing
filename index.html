@@ -578,8 +578,7 @@ var S={
 
 function optionTotal(o){return Object.keys(o.items).reduce(function(s,k){return s+o.items[k].price},0)}
 function optionUrl(o){
-  var parts=Object.keys(o.items).map(function(v){return v+':1'});
-  return parts.length?CFG.STORE+'/cart/'+parts.join(','):null;
+  return buildCartUrl(o.items);
 }
 function saveCurrentAsOption(name){
   var ids=Object.keys(S.selected);
@@ -634,11 +633,29 @@ function fetchCollections(){
 /* Etape 2 : produits d'une collection (appele a la volee sur step 2). */
 function fetchCollectionProducts(handle){
   if(!handle)return Promise.resolve([]);
-  var url=CFG.STORE+'/collections/'+handle+'/products.json?limit=250';
-  return fetch(url,{credentials:'omit'})
-    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
-    .then(function(data){
-      return (data.products||[]).filter(function(p){
+  
+  function fetchPage(page) {
+    var url=CFG.STORE+'/collections/'+handle+'/products.json?limit=250&page='+page;
+    return fetch(url,{credentials:'omit'})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+      .then(function(data){
+        var products = data.products || [];
+        if (products.length === 250) {
+          return fetchPage(page + 1).then(function(nextProducts) {
+            return products.concat(nextProducts);
+          });
+        }
+        return products;
+      });
+  }
+
+  return fetchPage(1)
+    .then(function(allProducts){
+      return allProducts.filter(function(p){
+        // Ne pas inclure quand le titre ou le handle commence par "location" (insensible à la casse)
+        if ((p.title && /^location/i.test(p.title.trim())) || (p.handle && /^location/i.test(p.handle.trim()))) {
+          return false;
+        }
         return (p.variants||[]).some(function(v){return v.available===true});
       });
     })
@@ -705,6 +722,65 @@ function getRecommendation(){
   }
 }
 
+var CAT_SIZE_SPECS = {
+  aile: { unit: 'm²', min: 2, max: 19 },
+  kite: { unit: 'm²', min: 2, max: 19 },
+  planche_r: { unit: 'L', min: 20, max: 200 },
+  planche_g: { unit: 'L', min: 20, max: 200 },
+  planche: { unit: 'cm', min: 120, max: 165 }, // kite twin-tip boards
+  foil: { unit: 'cm²', min: 400, max: 2500 }
+};
+
+/* Analyse de la taille selon la catégorie pour améliorer la pertinence */
+function parseSizeForCategory(variantTitle, productTitle, catKey) {
+  var spec = CAT_SIZE_SPECS[catKey];
+  if (!spec) return null;
+
+  // 1. Essayer d'abord un parsing strict avec unité (m, m², L, cm, cm²)
+  var strict = parseSizeWithUnit(variantTitle) || parseSizeWithUnit(productTitle);
+  if (strict) {
+    if (strict.unit === spec.unit) {
+      return strict;
+    }
+  }
+
+  // 2. Si aucun résultat strict, essayer d'extraire un nombre brut correspondant à la plage attendue pour cette catégorie
+  var sources = [variantTitle, productTitle];
+  for (var s = 0; s < sources.length; s++) {
+    var str = sources[s];
+    if (!str) continue;
+
+    // Normalisation : remplacer les virgules par des points, minuscules
+    var normalized = String(str).toLowerCase().replace(',', '.');
+
+    // Cas particulier : planche de twin-tip (planche) contenant un 'x' (ex: "138x41" ou "138 x 41")
+    if (catKey === 'planche' && normalized.indexOf('x') !== -1) {
+      var parts = normalized.split('x');
+      var firstNum = parseFloat(parts[0].replace(/[^\d.]/g, ''));
+      if (!isNaN(firstNum) && firstNum >= spec.min && firstNum <= spec.max) {
+        return { value: firstNum, unit: spec.unit };
+      }
+    }
+
+    // Trouver tous les nombres isolés ou décimaux dans la chaîne
+    var numbers = normalized.match(/\d+(?:\.\d+)?/g);
+    if (numbers) {
+      for (var i = 0; i < numbers.length; i++) {
+        var num = parseFloat(numbers[i]);
+        if (!isNaN(num) && num >= spec.min && num <= spec.max) {
+          // Safeguard: ignore typical model years (2015-2030) for foils
+          if (catKey === 'foil' && num >= 2015 && num <= 2030 && num % 1 === 0) {
+            continue;
+          }
+          return { value: num, unit: spec.unit };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 /* Parsing strict : exige une UNITE attachee au nombre (m, m², L, cm, cm²).       */
 /* Evite que "Keypod 5GS" -> 5 ou "Pro 2024" -> 2024 soient pris pour des tailles. */
 /* Retourne {value:number, unit:'m²'|'L'|'cm²'|'cm'} ou null.                      */
@@ -758,10 +834,10 @@ function parseRangeWithUnit(str){
 }
 
 /* Score de proximite entre 0 (loin) et 1 (parfait). Exige la bonne unite.        */
-/* Renvoie {score, inRange} : inRange=true => RECO badge.                         */
+/* Renvoie {score, inRange, variant} : inRange=true => RECO badge.                         */
 function recoCloseness(product,catKey,reco){
   var cat=(CATEGORY_MAP[S.discipline]||[]).find(function(c){return c.key===catKey});
-  if(!cat||!cat.sized)return {score:1,inRange:false};
+  if(!cat||!cat.sized)return {score:1,inRange:false,variant:null};
   var expectedUnit=cat.unit;
 
   var targets=[];
@@ -775,14 +851,15 @@ function recoCloseness(product,catKey,reco){
     else if(catKey==='planche')targets=reco.sizes.planche;
   }
   targets=(targets||[]).filter(Boolean);
-  if(!targets.length)return {score:0,inRange:false};
+  if(!targets.length)return {score:0,inRange:false,variant:null};
 
   var variants=product.variants||[];
   var bestScore=0,bestInRange=false;
+  var bestVariantObj=null;
 
   for(var i=0;i<variants.length;i++){
     if(!variants[i].available)continue;
-    var ps=parseSizeWithUnit(variants[i].title)||parseSizeWithUnit(variants[i].option1)||parseSizeWithUnit(product.title);
+    var ps=parseSizeForCategory(variants[i].title, product.title, catKey)||parseSizeForCategory(variants[i].option1, product.title, catKey);
     if(!ps)continue;
     var pUnit=ps.unit==='m'?'m²':ps.unit;
     if(pUnit!==expectedUnit)continue;
@@ -805,10 +882,17 @@ function recoCloseness(product,catKey,reco){
         var rel=dist/center;
         score=Math.max(0,1-rel*2);  // 25% ecart => score 0.5, 50% => 0
       }
-      if(score>bestScore){bestScore=score;bestInRange=inRange}
+      if(score>bestScore){
+        bestScore=score;
+        bestInRange=inRange;
+        bestVariantObj=variants[i];
+      } else if(score===bestScore && inRange && !bestInRange) {
+        bestInRange=true;
+        bestVariantObj=variants[i];
+      }
     }
   }
-  return {score:bestScore,inRange:bestInRange};
+  return {score:bestScore,inRange:bestInRange,variant:bestVariantObj};
 }
 
 /* Compat : true ssi le produit est exactement dans la fourchette recommandee.    */
@@ -831,9 +915,11 @@ function pickByCategory(catKey,reco){
   var THRESHOLD=cat.sized?(CFG.MATCH_THRESHOLD||0.5):0;
   var out=[];
   cat.products.forEach(function(p){
-    var r=cat.sized?recoCloseness(p,catKey,reco):{score:1,inRange:false};
+    var r=cat.sized?recoCloseness(p,catKey,reco):{score:1,inRange:false,variant:null};
     if(cat.sized&&r.score<THRESHOLD)return;
-    var v=bestVariant(p);
+    var vObj = r.variant || (p.variants||[]).find(function(x){return x.available}) || p.variants[0];
+    if(!vObj)return;
+    var v = {id:vObj.id,price:Math.round(parseFloat(vObj.price))||0,title:vObj.title};
     if(!v||!v.price)return;
     out.push({product:p,variant:v,score:r.score,reco:r.inRange,catKey:catKey});
   });
@@ -951,7 +1037,7 @@ function renderRecoChips(reco){
 }
 
 function productCard(p,recoFlag){
-  var v=(p.variants||[]).find(function(x){return x.available})||p.variants[0];
+  var v=p._matchedVariant || (p.variants||[]).find(function(x){return x.available})||p.variants[0];
   var img=(p.images&&p.images[0]&&p.images[0].src)||'';
   var vendor=p.vendor||'';
   var variantTitle=v.title&&v.title!=='Default Title'?v.title:'';
@@ -1176,13 +1262,13 @@ function syncCatalogChecks(){
 
 /* Extrait la taille numerique pour tri (variants ou titre).
    9999 si introuvable -> les non-dimensionnes finissent en queue. */
-function getProductSize(p){
+function getProductSize(p,catKey){
   var vs=p.variants||[];
   for(var i=0;i<vs.length;i++){
-    var ps=parseSizeWithUnit(vs[i].title)||parseSizeWithUnit(vs[i].option1);
+    var ps=parseSizeForCategory(vs[i].title, p.title, catKey)||parseSizeForCategory(vs[i].option1, p.title, catKey);
     if(ps)return ps.value;
   }
-  var pt=parseSizeWithUnit(p.title);
+  var pt=parseSizeForCategory(p.title, p.title, catKey);
   return pt?pt.value:9999;
 }
 
@@ -1241,7 +1327,8 @@ function renderCatalog(){
       var r=recoCloseness(p,cat.key,reco);
       p._score=r.score;
       p._reco=cat.sized?r.inRange:true; // non-sized = tout reco
-      p._size=getProductSize(p);
+      p._size=getProductSize(p,cat.key);
+      p._matchedVariant=r.variant;
     });
     var totalAvailable=list.length;
     list=list.filter(function(p){return !cat.sized||p._score>=THRESHOLD});
@@ -1362,10 +1449,30 @@ function refreshCart(){
 /* ============================================================ */
 /*  PANIER URL + ENVOI                                           */
 /* ============================================================ */
-function buildCartUrl(){
-  var parts=Object.keys(S.selected).map(function(vid){return vid+':1'});
+function buildCartUrl(items){
+  var targetItems = items || S.selected;
+  var parts=Object.keys(targetItems).map(function(vid){return vid+':1'});
   if(!parts.length)return null;
-  return CFG.STORE+'/cart/'+parts.join(',');
+  
+  var url = CFG.STORE+'/cart/'+parts.join(',');
+  var params = [];
+  
+  // Paramètres UTM de base pour le suivi
+  params.push('utm_source=simulateur');
+  params.push('utm_medium=email');
+  params.push('utm_campaign=devis');
+  
+  // Attribut de panier Shopify (apparaît sur la commande finale dans Shopify)
+  params.push('attributes[Source]=Simulateur%20Devis');
+  
+  // Récupérer dynamiquement le vendeur ou la boutique depuis l'URL de la page (ex: ?vendeur=Jean ou ?v=Jean)
+  var urlParams = new URLSearchParams(window.location.search);
+  var vendeur = urlParams.get('vendeur') || urlParams.get('v');
+  if (vendeur) {
+    params.push('attributes[Vendeur]=' + encodeURIComponent(vendeur));
+  }
+  
+  return url + '?' + params.join('&');
 }
 
 function buildEmailBody(){
@@ -1785,10 +1892,16 @@ function openProductModal(handle,fallback){
       el('prodModalTitle').textContent=p.vendor?p.vendor:p.title;
       el('prodVendor').textContent=p.vendor||'';
       el('prodTitle').textContent=p.title;
-      // Premier variant disponible
-      var firstAvail=(p.variants||[]).find(function(v){return v.available})||p.variants[0];
-      modalState.selectedVariantId=firstAvail.id;
-      renderModalPrice(firstAvail);
+      // Choisir le variant passé en paramètre si disponible, sinon le premier dispo
+      var chosenVariant = null;
+      if (fallback && fallback.variantId) {
+        chosenVariant = (p.variants||[]).find(function(v){return v.id === fallback.variantId && v.available});
+      }
+      if (!chosenVariant) {
+        chosenVariant = (p.variants||[]).find(function(v){return v.available})||p.variants[0];
+      }
+      modalState.selectedVariantId=chosenVariant.id;
+      renderModalPrice(chosenVariant);
       // Photos
       var imgs=(p.images&&p.images.length?p.images:[p.featured_image]).filter(Boolean);
       if(!imgs.length){el('prodMain').style.background='#ecfeff';}
@@ -1813,7 +1926,7 @@ function openProductModal(handle,fallback){
         el('prodVsel').style.display='flex';
         el('prodVariants').innerHTML=vs.map(function(v){
           var unavail=!v.available;
-          return '<div class="variant'+(v.id===firstAvail.id?' on':'')+(unavail?' unavail':'')+'" data-vid="'+v.id+'" data-price="'+v.price+'">'+
+          return '<div class="variant'+(v.id===modalState.selectedVariantId?' on':'')+(unavail?' unavail':'')+'" data-vid="'+v.id+'" data-price="'+v.price+'">'+
             '<span>'+escapeHtml(v.title)+'</span>'+
             '<small>'+priceEur(v)+'€'+(unavail?' · épuisé':'')+'</small>'+
           '</div>';
