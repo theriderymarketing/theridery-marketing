@@ -2683,6 +2683,14 @@ function initDiscount() {
       localStorage.setItem('ridery_discount_code', urlDiscount);
       if (codeInput) codeInput.value = urlDiscount;
     }
+  } else {
+    // Par défaut pour chaque nouvelle simulation, on réinitialise à 0
+    localStorage.setItem('ridery_discount_val_percent', '0');
+    localStorage.setItem('ridery_discount_val_euro', '0');
+    localStorage.removeItem('ridery_discount_custom_percent');
+    localStorage.removeItem('ridery_discount_custom_euro');
+    localStorage.removeItem('ridery_discount_motif');
+    localStorage.removeItem('ridery_discount_code');
   }
 
   setDiscountMode(initialMode);
