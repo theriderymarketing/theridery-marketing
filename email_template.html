@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ton setup The Ridery</title>
+</head>
+<body style="margin:0;padding:0;background:#f6fcfd;font-family:'Helvetica Neue',Arial,sans-serif;color:#0b1120;-webkit-font-smoothing:antialiased;">
+
+<!-- Préheader -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f6fcfd;opacity:0;">
+  Ton setup personnalisé est prêt. Découvre notre proposition.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6fcfd;padding:24px 0;">
+  <tr>
+    <td align="center">
+
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 20px rgba(11,17,32,.06);">
+
+        <!-- HERO TEAL -->
+        <tr>
+          <td style="background:#22d8c8;padding:38px 32px;text-align:center;">
+            <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:3px;color:#c5f3ed;font-weight:800;text-transform:uppercase;">
+              The Ridery
+            </p>
+            <h1 style="font-family:'Staatliches','Impact',sans-serif;font-size:36px;letter-spacing:2.5px;color:#ffffff;margin:0 0 10px 0;line-height:1;text-transform:uppercase;">
+              Ton Setup {{ event.discipline_label|default:''|upper }}
+            </h1>
+            <p style="margin:0;font-size:13px;color:#ffffff;font-weight:700;letter-spacing:.5px;">
+              Personnalisé pour {{ first_name|default:'rider' }}
+            </p>
+          </td>
+        </tr>
+
+        <!-- INTRO -->
+        <tr>
+          <td style="padding:36px 32px 8px 32px;">
+            <p style="margin:0;font-size:15px;color:#374151;line-height:1.6;">
+              Hello <strong style="color:#0b1120;">{{ first_name|default:'rider' }}</strong>,<br><br>
+              Suite à notre échange, tu trouveras ci-dessous <strong style="color:#0b1120;">un pack personnalisé</strong> qu'on a composé pour toi, dans ton budget et adapté à ton niveau.<br><br>
+              Réponds simplement à ce mail ou contacte-nous pour en discuter ou ajuster ton setup.
+            </p>
+          </td>
+        </tr>
+
+        <!-- PROFIL CARD 4 COLS -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0;">
+              <tr>
+                <td width="25%" valign="top" align="center" style="padding:5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#c5f3ed;border-radius:10px;"><tr>
+                    <td align="center" style="padding:14px 6px;">
+                      <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:1px;color:#94a3b8;font-weight:800;text-transform:uppercase;line-height:1.2;">Niveau</p>
+                      <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#22d8c8;font-weight:800;line-height:1.2;text-transform:capitalize;">{{ event.niveau|default:'—' }}</p>
+                    </td>
+                  </tr></table>
+                </td>
+                <td width="25%" valign="top" align="center" style="padding:5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#c5f3ed;border-radius:10px;"><tr>
+                    <td align="center" style="padding:14px 6px;">
+                      <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:1px;color:#94a3b8;font-weight:800;text-transform:uppercase;line-height:1.2;">Poids</p>
+                      <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#22d8c8;font-weight:800;line-height:1.2;">{{ event.poids_kg|default:'—' }} kg</p>
+                    </td>
+                  </tr></table>
+                </td>
+                <td width="25%" valign="top" align="center" style="padding:5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#c5f3ed;border-radius:10px;"><tr>
+                    <td align="center" style="padding:14px 6px;">
+                      <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:1px;color:#94a3b8;font-weight:800;text-transform:uppercase;line-height:1.2;">Taille</p>
+                      <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#22d8c8;font-weight:800;line-height:1.2;">{{ event.taille_cm|default:'—' }} cm</p>
+                    </td>
+                  </tr></table>
+                </td>
+                <td width="25%" valign="top" align="center" style="padding:5px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#c5f3ed;border-radius:10px;"><tr>
+                    <td align="center" style="padding:14px 6px;">
+                      <p style="margin:0 0 6px 0;font-family:Arial,sans-serif;font-size:9px;letter-spacing:1px;color:#94a3b8;font-weight:800;text-transform:uppercase;line-height:1.2;">Budget</p>
+                      <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#22d8c8;font-weight:800;line-height:1.2;">{{ event.budget|default:'—' }}€</p>
+                    </td>
+                  </tr></table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- SECTION TITLE TON SETUP -->
+        <tr>
+          <td style="padding:32px 32px 16px 32px;text-align:center;">
+            <p style="margin:0;font-family:'Staatliches','Impact',sans-serif;font-size:22px;letter-spacing:3px;color:#0b1120;text-transform:uppercase;">
+              Ton Setup
+            </p>
+          </td>
+        </tr>
+
+        <!-- RECOS 4 CARDS -->
+        <tr>
+          <td style="padding:0 32px 0 32px;">
+            {{ event.recos_html|safe }}
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;">
+            <div style="height:1px;background:#eef0f4;font-size:0;line-height:0;">&nbsp;</div>
+          </td>
+        </tr>
+
+        <!-- OPTIONS (1 ou plusieurs paniers) -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0;font-family:'Staatliches','Impact',sans-serif;font-size:20px;letter-spacing:2px;color:#0b1120;text-transform:uppercase;">
+                    <span style="display:inline-block;width:6px;height:20px;background:#22d8c8;border-radius:3px;vertical-align:middle;margin-right:12px;"></span>{% if event.nb_options > 1 %}Tes options{% else %}Ta proposition{% endif %}
+                  </p>
+                </td>
+                <td align="right" style="vertical-align:middle;">
+                  <span style="display:inline-block;background:#c5f3ed;color:#22d8c8;font-size:11px;letter-spacing:1px;font-weight:800;padding:5px 12px;border-radius:99px;text-transform:uppercase;">
+                    {{ event.nb_options|default:1 }} option{% if event.nb_options > 1 %}s{% endif %}
+                  </span>
+                </td>
+              </tr>
+            </table>
+            {% if event.nb_options > 1 %}
+            <p style="margin:10px 0 14px 0;font-size:13px;color:#374151;line-height:1.5;">
+              On t'a préparé <strong>{{ event.nb_options }} options</strong> dans ton budget. Choisis celle qui te parle.
+            </p>
+            {% endif %}
+            <div style="margin-top:14px;">
+              {{ event.options_html|safe }}
+            </div>
+            {% if event.over_budget %}
+            <p style="margin:14px 0 0 0;font-size:13px;color:#dc2626;font-weight:700;text-align:center;background:#fef2f2;padding:10px 14px;border-radius:10px;border:1px solid #fecaca;">
+              Léger dépassement budget — dis-nous, on peut ajuster ensemble.
+            </p>
+            {% endif %}
+            <p style="margin:16px 0 0 0;font-size:12px;color:#94a3b8;font-weight:600;line-height:1.5;text-align:center;">
+              Tu valides quand tu veux, ou jamais. Aucune pression.
+            </p>
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <div style="height:1px;background:#eef0f4;font-size:0;line-height:0;">&nbsp;</div>
+          </td>
+        </tr>
+
+        <!-- WHY US -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <p style="margin:0 0 14px 0;font-family:'Staatliches','Impact',sans-serif;font-size:18px;letter-spacing:2px;color:#0b1120;text-transform:uppercase;text-align:center;">
+              Pourquoi The Ridery
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="50%" style="padding:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ecfeff;border:1px solid #eef0f4;border-radius:12px;">
+                    <tr>
+                      <td style="padding:14px 16px;font-size:13px;color:#0b1120;line-height:1.5;">
+                        <strong style="color:#22d8c8;font-family:'Staatliches','Impact',sans-serif;letter-spacing:1.5px;font-size:13px;display:block;margin-bottom:4px;">CONSEIL DE PROS</strong>
+                        Riders passionnés, on teste tout ce qu'on vend.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ecfeff;border:1px solid #eef0f4;border-radius:12px;">
+                    <tr>
+                      <td style="padding:14px 16px;font-size:13px;color:#0b1120;line-height:1.5;">
+                        <strong style="color:#22d8c8;font-family:'Staatliches','Impact',sans-serif;letter-spacing:1.5px;font-size:13px;display:block;margin-bottom:4px;">LIVRAISON 3-10 J</strong>
+                        Partout en France, suivi par mail.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              <tr>
+                <td width="50%" style="padding:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ecfeff;border:1px solid #eef0f4;border-radius:12px;">
+                    <tr>
+                      <td style="padding:14px 16px;font-size:13px;color:#0b1120;line-height:1.5;">
+                        <strong style="color:#22d8c8;font-family:'Staatliches','Impact',sans-serif;letter-spacing:1.5px;font-size:13px;display:block;margin-bottom:4px;">CLICK &amp; COLLECT</strong>
+                        Paris &amp; Marseille — gratuit.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="50%" style="padding:8px;vertical-align:top;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ecfeff;border:1px solid #eef0f4;border-radius:12px;">
+                    <tr>
+                      <td style="padding:14px 16px;font-size:13px;color:#0b1120;line-height:1.5;">
+                        <strong style="color:#22d8c8;font-family:'Staatliches','Impact',sans-serif;letter-spacing:1.5px;font-size:13px;display:block;margin-bottom:4px;">REPRISE MATOS</strong>
+                        On rachète ton ancien set-up.
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- BOUTIQUES -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg,#22d8c8 0%,#0d9d92 100%);background-color:#22d8c8;border-radius:14px;">
+              <tr>
+                <td style="padding:24px 22px;text-align:center;">
+                  <p style="margin:0 0 14px 0;font-family:'Staatliches','Impact',sans-serif;font-size:16px;letter-spacing:2.5px;color:#ffffff;text-transform:uppercase;">
+                    Une question ? On est là.
+                  </p>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="50%" style="padding:8px;text-align:center;color:#ffffff;">
+                        <p style="margin:0 0 4px 0;font-family:'Staatliches','Impact',sans-serif;font-size:14px;letter-spacing:2px;color:#ffffff;text-transform:uppercase;">Marseille</p>
+                        <a href="tel:+33767440517" style="color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:1px;">07 67 44 05 17</a>
+                      </td>
+                      <td width="50%" style="padding:8px;text-align:center;color:#ffffff;">
+                        <p style="margin:0 0 4px 0;font-family:'Staatliches','Impact',sans-serif;font-size:14px;letter-spacing:2px;color:#ffffff;text-transform:uppercase;">Paris</p>
+                        <a href="tel:+33769472584" style="color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;letter-spacing:1px;">07 69 47 25 84</a>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin:14px 0 0 0;font-size:12px;color:#ecfeff;line-height:1.5;">
+                    Ou réponds simplement à ce mail, on lit tout.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- SIGNATURE -->
+        <tr>
+          <td style="padding:32px 32px 8px 32px;text-align:center;">
+            <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;font-style:italic;">
+              On se retrouve sur l'eau,<br>
+              <strong style="color:#0b1120;font-style:normal;">La team THE RIDERY</strong>
+            </p>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#f6fcfd;padding:28px 32px;text-align:center;border-top:1px solid #e6e8ee;">
+            <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:2px;color:#374151;text-transform:uppercase;font-weight:700;">
+              The Ridery — Paris · Marseille
+            </p>
+            <p style="margin:6px 0 14px 0;font-size:11px;color:#64748b;">
+              <a href="https://theridery.com" style="color:#22d8c8;text-decoration:none;font-weight:700;">theridery.com</a>
+            </p>
+            <p style="margin:0;font-size:10px;color:#94a3b8;">
+              <a href="{% unsubscribe %}" style="color:#94a3b8;text-decoration:underline;">Se désabonner</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+      <p style="margin:18px 0 0 0;font-size:11px;color:#94a3b8;text-align:center;">
+        Devis généré via le simulateur — modifiable à tout moment.
+      </p>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>
