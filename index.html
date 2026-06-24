@@ -193,6 +193,9 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
 .empty a{color:var(--orange);font-weight:700;text-decoration:none}
 .empty a:hover{text-decoration:underline}
 
+.view-site-btn{display:inline-flex;align-items:center;justify-content:center;font-family:inherit;font-size:0.65em;font-weight:800;color:var(--orange);text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;background:var(--orange-soft);padding:4px 8px;border-radius:6px;transition:all 0.2s;border:1px solid rgba(34,216,200,0.25)}
+.view-site-btn:hover{background:var(--orange);color:#fff;box-shadow:0 3px 8px rgba(34,216,200,0.3)}
+
 /* Floating cart */
 .cart{position:fixed;bottom:14px;left:14px;right:14px;background:linear-gradient(135deg,var(--orange) 0%,var(--orange-d) 100%);color:#fff;padding:14px 20px;box-shadow:0 -4px 32px rgba(34,216,200,.35),0 0 0 1px rgba(255,255,255,.08);z-index:50;display:none;border-radius:var(--r-lg);max-width:856px;margin:0 auto}
 .cart.show{display:block;animation:slideUp .3s cubic-bezier(.4,0,.2,1)}
@@ -589,7 +592,10 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
     <div class="body">
       <span class="vendor" id="prodVendor"></span>
       <h4 id="prodTitle"></h4>
-      <div class="price" id="prodPrice"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="price" id="prodPrice" style="margin-bottom:0"></div>
+        <a id="prodSiteLink" href="#" target="_blank" style="display:none; font-family:inherit; font-size:0.75em; font-weight:700; color:var(--orange); text-decoration:none; background:var(--orange-soft); padding:5px 10px; border-radius:6px; transition:all 0.2s;">Voir sur le site ↗</a>
+      </div>
       <div class="vsel" id="prodVsel" style="display:none">
         <span class="lbl">Choisir une option</span>
         <div class="variants" id="prodVariants"></div>
@@ -1241,6 +1247,7 @@ function productCard(p,recoFlag){
     '</div>'+
     '<div class="row">'+
       '<div class="price">'+price+'€</div>'+
+      (p.handle?'<a href="'+CFG.STORE+'/products/'+escapeHtml(p.handle)+'" target="_blank" class="view-site-btn" onclick="event.stopPropagation()">Site ↗</a>':'')+
       '<div class="check"></div>'+
     '</div>'+
   '</div>';
@@ -1315,7 +1322,10 @@ function packCard(p){
       '<div class="ptitle">'+escapeHtml(p.title)+'</div>'+
       (p.vendor?'<div class="pvendor">'+escapeHtml(p.vendor)+'</div>':'')+
     '</div>'+
-    '<div class="pprice">'+price+'€</div>'+
+    '<div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">'+
+      '<div class="pprice">'+price+'€</div>'+
+      (p.handle?'<a href="'+CFG.STORE+'/products/'+escapeHtml(p.handle)+'" target="_blank" class="view-site-btn" onclick="event.stopPropagation()">Site ↗</a>':'')+
+    '</div>'+
   '</div>';
 }
 
@@ -1956,6 +1966,29 @@ function pushKlaviyoEvent(payload){
   }).catch(function(err){console.warn('[Klaviyo] KO',err.message);return false});
 }
 
+function findProductHandle(variantId){
+  var vid = String(variantId);
+  if (S.packs) {
+    for (var i = 0; i < S.packs.length; i++) {
+      var p = S.packs[i];
+      var hasVariant = (p.variants || []).some(function(v){ return String(v.id) === vid; });
+      if (hasVariant) return p.handle;
+    }
+  }
+  var cats = CATEGORY_MAP[S.discipline] || [];
+  for (var c = 0; c < cats.length; c++) {
+    var cat = cats[c];
+    if (cat.products) {
+      for (var j = 0; j < cat.products.length; j++) {
+        var p = cat.products[j];
+        var hasVariant = (p.variants || []).some(function(v){ return String(v.id) === vid; });
+        if (hasVariant) return p.handle;
+      }
+    }
+  }
+  return null;
+}
+
 /* Loope toutes les options (sauvegardées + courante si non vide) et construit
    un bloc HTML avec — par option — image+titre+prix de chaque article, total,
    et un CTA "OUVRIR CETTE OPTION" qui pointe sur l'URL Shopify pre-remplie. */
@@ -1985,7 +2018,8 @@ function buildOptionsHtml(allOptions){
     keys.forEach(function(k,i){
       var it=o.items[k];
       var img=it.image||'';
-      var pUrl=it.handle?'https://theridery.com/products/'+it.handle:'';
+      var handle = it.handle || findProductHandle(k || it.variantId);
+      var pUrl=handle?'https://theridery.com/products/'+handle:'';
       
       var imgHtml=img?'<img src="'+escapeHtml(img)+'" alt="" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:10px;border:1px solid #eef0f4;object-fit:cover;background:#ecfeff;">':'<div style="width:80px;height:80px;border-radius:10px;background:#ecfeff;border:1px solid #eef0f4;"></div>';
       if(pUrl){
@@ -2278,12 +2312,15 @@ function openProductModal(handle,fallback){
   el('prodAdd').classList.remove('added');
   el('prodAdd').textContent='SÉLECTIONNER';
   el('prodAdd').disabled=true;
+  el('prodSiteLink').style.display='none';
   modalState={handle:handle,product:null,selectedVariantId:null,activeImg:0};
 
   fetch(CFG.STORE+'/products/'+handle+'.js',{credentials:'omit'})
     .then(function(r){return r.json()})
     .then(function(p){
       modalState.product=p;
+      el('prodSiteLink').href=CFG.STORE+'/products/'+p.handle;
+      el('prodSiteLink').style.display='inline-block';
       el('prodModalTitle').textContent=p.vendor?p.vendor:p.title;
       el('prodVendor').textContent=p.vendor||'';
       el('prodTitle').textContent=p.title;
