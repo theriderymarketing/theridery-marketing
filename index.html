@@ -2022,6 +2022,7 @@ function buildOptionsHtml(allOptions){
       var img=it.image||'';
       var handle = it.handle || findProductHandle(k || it.variantId);
       var pUrl=handle?'https://theridery.com/products/'+handle:'';
+      console.log('[buildOptionsHtml] Item:', it.title, 'k:', k, 'handle:', handle, 'pUrl:', pUrl);
       
       var imgHtml=img?'<img src="'+escapeHtml(img)+'" alt="" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:10px;border:1px solid #eef0f4;object-fit:cover;background:#ecfeff;">':'<div style="width:80px;height:80px;border-radius:10px;background:#ecfeff;border:1px solid #eef0f4;"></div>';
       if(pUrl){
@@ -2030,7 +2031,7 @@ function buildOptionsHtml(allOptions){
       
       var titleHtml=escapeHtml(it.title);
       if(pUrl){
-        titleHtml='<a href="'+pUrl+'" target="_blank" style="text-decoration:none;color:#0b1120;">'+titleHtml+'</a>';
+        titleHtml='<a href="'+pUrl+'" target="_blank" style="text-decoration:underline;color:#22d8c8;">'+titleHtml+'</a>';
       }
 
       rows+='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0;border-collapse:separate;"><tr>'+
