@@ -1362,6 +1362,7 @@ function renderBundles(){
 
   // Click handler bundles (verif stock live au moment du choix)
   box.onclick=function(e){
+    if(e.target.closest('.view-site-btn')) return;
     // Click sur une ligne d'un setup -> ouvre la modale produit
     var litem=e.target.closest('.litem');
     if(litem){
@@ -1661,6 +1662,7 @@ function renderCatalog(){
 
   // Delegation click : toolbar > h4 toggle > .prod modale
   el('catalog').onclick=function(e){
+    if(e.target.closest('.view-site-btn')) return;
     // Toolbar filter/sort
     var btn=e.target.closest('.catgroup .toolbar .grp button');
     if(btn){
