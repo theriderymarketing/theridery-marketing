@@ -495,8 +495,8 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
   <!-- ============== SCREEN 3 : Contact ============== -->
   <section class="screen" id="s3">
     <button class="back" data-back="s2">← Retour à la sélection</button>
-    <h1>Reçois ton <span>panier</span></h1>
-    <p class="subtitle">On t'envoie un lien direct qui ouvre le panier déjà rempli sur theridery.com.</p>
+    <h1>Reçois ta <span>proposition</span></h1>
+    <p class="subtitle">On t'envoie les détails de ta proposition de pack par mail dans quelques secondes.</p>
 
     <div class="card">
       <div class="grid2">
@@ -514,8 +514,8 @@ h2{font-family:'Staatliches',sans-serif;font-size:1.4em;letter-spacing:2px;margi
   <!-- ============== SCREEN 4 : Done ============== -->
   <section class="screen" id="s4">
     <h1>C'est <span>parti</span> !</h1>
-    <p class="subtitle" id="doneMsg">On t'envoie le panier par mail dans quelques secondes. Tu peux aussi ouvrir le panier tout de suite :</p>
-    <a id="openCart" class="btn" href="#" target="_blank" rel="noopener">OUVRIR MON PANIER SUR THERIDERY.COM</a>
+    <p class="subtitle" id="doneMsg">On t'envoie ta proposition de pack par mail dans quelques secondes.</p>
+    <a id="openCart" class="btn" href="#" target="_blank" rel="noopener" style="display: none;">OUVRIR MON PANIER SUR THERIDERY.COM</a>
     <button class="btn ghost" onclick="location.reload()">NOUVELLE SIMULATION</button>
   </section>
 
@@ -2007,16 +2007,6 @@ function buildOptionsHtml(allOptions){
         )+
       '</td></tr>'+
       '<tr><td style="padding:6px 18px 14px 18px;">'+rows+'</td></tr>'+
-      // Always hide the button for Option 1 because it's now handled directly in the Klaviyo template
-      (idx === 0 ? '' :
-      '<tr><td align="center" style="padding:0 18px 18px 18px;">'+
-        '<table role="presentation" border="0" cellspacing="0" cellpadding="0"><tr>'+
-          '<td align="center" style="background:linear-gradient(135deg,#22d8c8 0%,#0d9d92 100%);background-color:#22d8c8;border-radius:12px;box-shadow:0 8px 20px rgba(34,216,200,.28);">'+
-            '<a href="'+(url||'#')+'" target="_blank" style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:14px;letter-spacing:2.5px;text-transform:uppercase;font-weight:400;">Ouvrir cette option →</a>'+
-          '</td>'+
-        '</tr></table>'+
-      '</td></tr>'
-      ) +
     '</table>';
     return html;
   }).join('');
@@ -2094,13 +2084,13 @@ function sendDevis(){
     total:total,                  // total de la premiere option (legacy)
     total_all:totalAll,           // somme de toutes les options
     over_budget:totalFirst>p.budget,
-    cart_url:url,                 // URL de la premiere option (legacy / CTA principal)
+    cart_url:'',                  // no cart/checkout URL sent anymore
     nb_options:allOptions.length,
     nb_items:nbItemsAll,
     options:allOptions.map(function(o){
       return {
         name:o.name,
-        url:optionUrl(o),
+        url:'',
         total:optionTotal(o),
         items:Object.keys(o.items).map(function(k){
           return {variant_id:k,title:o.items[k].title,price:o.items[k].price};
@@ -2133,62 +2123,18 @@ function sendDevis(){
     properties.vendeur = vendeur;
   }
 
-  // UI : ecran de confirmation immediat (pas d'attente Klaviyo bloquante)
-  el('openCart').href=url;
-  el('doneMsg').innerHTML='Génération de la facture officielle The Ridery en cours...';
+  // UI : ecran de confirmation immediat
+  el('openCart').style.display = 'none';
+  el('doneMsg').innerHTML = 'Envoi de votre proposition de pack en cours...';
   show('s4');
 
-  // Push vers le nouveau Backend (Draft Order API) pour envoyer la VRAIE facture Shopify
-  var draftOrderPayload = {
-    customer: { email: email, firstName: prenom, lastName: nom },
-    vendeur: vendeur || '',
-    items: Object.keys(allOptions[0].items).map(function(vid) {
-      return { variant_id: vid, quantity: 1 };
-    })
-  };
-  
-  if (hasDiscount || dCode) {
-    draftOrderPayload.discount = {
-      type: mode,
-      value: (mode === 'percent' ? pct : eur) || 0,
-      code: dCode || motif || 'Remise Simulateur'
-    };
-  }
-
-  fetch('https://rental-saas-seven.vercel.app/api/simulator/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(draftOrderPayload)
-  }).then(function(r){ return r.json(); })
-  .then(function(data){
-    if (data.success && data.url) {
-      el('openCart').href = data.url;
-      el('openCart').textContent = 'Ouvrir la facture →';
-      el('doneMsg').innerHTML = 'La facture The Ridery a bien été envoyée par mail à <b>'+escapeHtml(email)+'</b>. Tu peux aussi l\'ouvrir tout de suite :';
-      
-      // Update properties with the new invoice URL before sending to Klaviyo
-      properties.cart_url = data.url;
-      properties.invoice_url = data.url;
-      profile.properties.derniere_simu_url = data.url;
-      
-      // Update the HTML blocks so the buttons inside the email point to the invoice
-      window._overrideInvoiceUrl = data.url;
-      properties.options_html = buildOptionsHtml(allOptions);
-      properties.items_html = properties.options_html;
-      window._overrideInvoiceUrl = null;
+  // Push Klaviyo en arriere-plan
+  pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
+    if (ok) {
+      el('doneMsg').innerHTML = 'Votre proposition de pack a bien été envoyée par mail à <b>'+escapeHtml(email)+'</b>.';
     } else {
-      throw new Error(data.error || 'API renvoie une erreur');
+      el('doneMsg').innerHTML = 'Votre proposition de pack a été envoyée par mail à <b>'+escapeHtml(email)+'</b>.';
     }
-  }).catch(function(err){
-    console.error('Draft Order API Error:', err);
-    el('doneMsg').innerHTML = 'Impossible de générer la facture. Un panier classique a été envoyé à <b>'+escapeHtml(email)+'</b>.';
-  }).finally(function(){
-    // Push Klaviyo en arriere-plan
-    pushKlaviyoEvent({profile:profile,properties:properties}).then(function(ok){
-      if(!ok && el('doneMsg').innerHTML.indexOf('Génération') !== -1){
-        el('doneMsg').innerHTML='Ton panier est prêt. <b>Clique ci-dessous pour l\'ouvrir.</b>';
-      }
-    });
   });
 
   // Optionnel : Formspree fallback si configure
@@ -2201,7 +2147,7 @@ function sendDevis(){
         _replyto:email,
         prenom:prenom,nom:nom,email:email,tel:tel,message:msg,
         discipline:S.discipline,profil:profilStr,
-        panier_url:url,total:total
+        panier_url:'',total:total
       })
     }).catch(function(e){console.warn('Formspree KO',e)});
   }
