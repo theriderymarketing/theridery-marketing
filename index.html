@@ -1405,7 +1405,8 @@ function renderBundles(){
             variantId:it.variant.id,
             price:it.variant.price,
             title:(it.product.vendor?it.product.vendor+' ':'')+it.product.title,
-            image:bImg
+            image:bImg,
+            handle:it.product.handle
           };
         });
         card.classList.add('picked');
@@ -1984,11 +1985,21 @@ function buildOptionsHtml(allOptions){
     keys.forEach(function(k,i){
       var it=o.items[k];
       var img=it.image||'';
+      var pUrl=it.handle?'https://theridery.com/products/'+it.handle:'';
+      
+      var imgHtml=img?'<img src="'+escapeHtml(img)+'" alt="" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:10px;border:1px solid #eef0f4;object-fit:cover;background:#ecfeff;">':'<div style="width:80px;height:80px;border-radius:10px;background:#ecfeff;border:1px solid #eef0f4;"></div>';
+      if(pUrl){
+        imgHtml='<a href="'+pUrl+'" target="_blank" style="text-decoration:none;display:block;">'+imgHtml+'</a>';
+      }
+      
+      var titleHtml=escapeHtml(it.title);
+      if(pUrl){
+        titleHtml='<a href="'+pUrl+'" target="_blank" style="text-decoration:none;color:#0b1120;">'+titleHtml+'</a>';
+      }
+
       rows+='<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0;border-collapse:separate;"><tr>'+
-        '<td width="80" valign="middle" style="width:80px;padding:0 12px 0 0;">'+
-          (img?'<img src="'+escapeHtml(img)+'" alt="" width="80" height="80" style="display:block;width:80px;height:80px;border-radius:10px;border:1px solid #eef0f4;object-fit:cover;background:#ecfeff;">':'<div style="width:80px;height:80px;border-radius:10px;background:#ecfeff;border:1px solid #eef0f4;"></div>')+
-        '</td>'+
-        '<td valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0b1120;line-height:1.4;font-weight:600;padding:0 8px 0 0;">'+escapeHtml(it.title)+'</td>'+
+        '<td width="80" valign="middle" style="width:80px;padding:0 12px 0 0;">'+imgHtml+'</td>'+
+        '<td valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0b1120;line-height:1.4;font-weight:600;padding:0 8px 0 0;">'+titleHtml+'</td>'+
         '<td valign="middle" align="right" style="font-family:\'Staatliches\',Impact,Arial,sans-serif;font-size:20px;color:#22d8c8;letter-spacing:1px;white-space:nowrap;padding-left:8px;">'+it.price+'€</td>'+
       '</tr></table>';
       if(i<keys.length-1)rows+='<div style="height:1px;background:#eef0f4;font-size:0;line-height:0;margin:0;">&nbsp;</div>';
@@ -2365,7 +2376,8 @@ el('prodAdd').onclick=function(){
     variantId:v.id,
     price:price,
     title:titleParts.filter(Boolean).join(' '),
-    image:img
+    image:img,
+    handle:p.handle
   };
   // Sync visuel sur la card du catalogue (si presente)
   var row=document.querySelector('#catalog .prod[data-vid="'+v.id+'"]');
